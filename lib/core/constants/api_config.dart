@@ -20,6 +20,9 @@ class ApiConfig {
   static String get floods => '$apiBaseUrl/disasters/floods';
   static String get weatherAlerts => '$apiBaseUrl/disasters/weather-alerts';
   static String get nearbyDisasters => '$apiBaseUrl/disasters/nearby';
+  static String get searchCountries => '$apiBaseUrl/disasters/countries/search';
+  static String countryEDA(String countryName) => '$apiBaseUrl/disasters/country/$countryName/eda';
+
 
   static String get aiChat => '$apiBaseUrl/ai/chat';
   static String get aiSafetyAdvice => '$apiBaseUrl/ai/safety-advice';

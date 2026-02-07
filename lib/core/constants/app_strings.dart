@@ -91,4 +91,34 @@ class AppStrings {
   static const String sos = 'SOS';
   static const String guide = 'Guide';
   static const String profile = 'Profile';
+
+  // Country EDA Screen
+  static const String countryEdasearch = 'Country Analysis';
+  static const String searchCountry = 'Search country name';
+  static const String countryOverview = 'Country Overview';
+  static const String riskAssessment = 'Risk Assessment';
+  static const String disasterStatistics = 'Disaster Statistics';
+  static const String seasonalRisks = 'Seasonal Risks';
+  static const String historicalData = 'Historical Data';
+  static const String safetyRecommendations = 'Safety Recommendations';
+  static const String earthquakeStatistics = 'Earthquake Statistics';
+  static const String floodStatistics = 'Flood Statistics';
+  static const String weatherStatistics = 'Weather Statistics';
+  static const String overallRiskLevel = 'Overall Risk Level';
+  static const String riskScore = 'Risk Score';
+  static const String primaryHazard = 'Primary Hazard';
+  static const String secondaryHazards = 'Secondary Hazards';
+  static const String lastMajorEvent = 'Last Major Event';
+  static const String disastersLastYear = 'Disasters Last Year';
+  static const String disastersLast5Years = 'Disasters Last 5 Years';
+  static const String trendDirection = 'Trend Direction';
+  static const String populationData = 'Population';
+  static const String areaData = 'Area (per km²)';
+  static const String incidentFrequency = 'Incident Frequency';
+  static const String noCountrySelected = 'No country selected';
+  static const String searchingCountries = 'Searching...';
+  static const String loadingCountryData = 'Loading country data...';
+  static const String failedToLoadData = 'Failed to load country data';
+  static const String recentEvents = 'Recent Events';
+  static const String tryAgain = 'Try Again';
 }

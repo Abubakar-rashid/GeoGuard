@@ -5,6 +5,7 @@ Disasters API endpoints
 from fastapi import APIRouter, Query
 from typing import List, Optional
 from app.models.disaster import Disaster, LocationRequest
+from app.models.country_eda import CountryEDA
 from app.services.disaster_service import disaster_service
 
 router = APIRouter()
@@ -78,3 +79,26 @@ async def get_nearby_disasters(location: LocationRequest):
         longitude=location.longitude,
         radius_km=500,
     )
+
+
+@router.get("/country/{country_name}/eda", response_model=CountryEDA)
+async def get_country_eda(
+    country_name: str = Query(..., description="Name of the country"),
+):
+    """
+    Get Exploratory Data Analysis (EDA) overview for a specific country.
+    Returns comprehensive disaster statistics, risk assessment, seasonal patterns,
+    and safety recommendations for the country.
+    """
+    return await disaster_service.get_country_eda(country_name=country_name)
+
+
+@router.get("/countries/search", response_model=List[str])
+async def search_countries(
+    query: str = Query(..., min_length=2, description="Search query for country name"),
+):
+    """
+    Search for countries by name.
+    Returns a list of matching country names.
+    """
+    return await disaster_service.search_countries(query=query)

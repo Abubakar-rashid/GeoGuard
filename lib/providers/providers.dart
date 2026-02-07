@@ -157,3 +157,21 @@ final locationTrackingProvider = StateProvider<bool>((ref) {
   final storage = ref.watch(localStorageServiceProvider);
   return storage.getLocationTrackingEnabled();
 });
+
+// ============ COUNTRY EDA ============
+
+final countrySearchProvider = 
+    FutureProvider.family<List<String>, String>((ref, query) async {
+  final disasterService = ref.watch(disasterServiceProvider);
+  return disasterService.searchCountries(query: query);
+});
+
+final countryEdaProvider = 
+    FutureProvider.family<CountryEDA?, String>((ref, countryName) async {
+  final disasterService = ref.watch(disasterServiceProvider);
+  return disasterService.getCountryEDA(countryName: countryName);
+});
+
+final selectedCountryProvider = StateProvider<String?>((ref) {
+  return null;
+});

@@ -1,4 +1,5 @@
 import '../models/disaster_model.dart';
+import '../models/country_eda_model.dart';
 import '../../core/constants/api_config.dart';
 import 'api_client.dart';
 
@@ -145,4 +146,41 @@ class DisasterService {
       return [];
     }
   }
+
+  /// Search for countries by name
+  Future<List<String>> searchCountries({required String query}) async {
+    try {
+      final response = await _apiClient.get(
+        ApiConfig.searchCountries,
+        queryParameters: {'query': query},
+      );
+
+      if (response.statusCode == 200) {
+        final data = response.data as List;
+        return data.map((c) => c as String).toList();
+      }
+      return [];
+    } catch (e) {
+      print('Error searching countries: $e');
+      return [];
+    }
+  }
+
+  /// Get EDA overview for a specific country
+  Future<CountryEDA?> getCountryEDA({required String countryName}) async {
+    try {
+      final response = await _apiClient.get(
+        ApiConfig.countryEDA(countryName),
+      );
+
+      if (response.statusCode == 200) {
+        return CountryEDA.fromJson(response.data as Map<String, dynamic>);
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching country EDA: $e');
+      return null;
+    }
+  }
 }
+
