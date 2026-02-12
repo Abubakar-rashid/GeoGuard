@@ -2,7 +2,7 @@
 Disasters API endpoints
 """
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Path
 from typing import List, Optional
 from app.models.disaster import Disaster, LocationRequest
 from app.models.country_eda import CountryEDA
@@ -83,7 +83,7 @@ async def get_nearby_disasters(location: LocationRequest):
 
 @router.get("/country/{country_name}/eda", response_model=CountryEDA)
 async def get_country_eda(
-    country_name: str = Query(..., description="Name of the country"),
+    country_name: str = Path(..., description="Name of the country"),
 ):
     """
     Get Exploratory Data Analysis (EDA) overview for a specific country.

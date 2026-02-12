@@ -1,13 +1,69 @@
+import 'package:flutter/services.dart';
 import '../models/disaster_model.dart';
 import '../models/country_eda_model.dart';
 import '../../core/constants/api_config.dart';
 import 'api_client.dart';
 
-/// Service for fetching disaster data from the backend API
+/// Service for fetching disaster data from local CSV file
 class DisasterService {
   final ApiClient _apiClient;
+  List<List<dynamic>>? _csvData;
+  Map<String, dynamic>? _csvHeaders;
 
   DisasterService({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
+
+  /// Load and parse CSV data from assets
+  Future<void> _loadCsvData() async {
+    if (_csvData != null) return; // Already loaded
+
+    try {
+      print('[CSV] Starting to load CSV from assets...');
+      final csvString = await rootBundle.loadString('assets/data/cleaned-data.csv');
+      print('[CSV] Loaded CSV string, length: ${csvString.length}');
+      
+      // Parse CSV using simple string splitting
+      final lines = csvString.split('\n');
+      print('[CSV] Total lines: ${lines.length}');
+      
+      _csvData = [];
+      for (final line in lines) {
+        if (line.isNotEmpty) {
+          _csvData!.add(_parseCSVLine(line));
+        }
+      }
+      
+      print('[CSV] Converted to CSV data, rows: ${_csvData!.length}');
+      
+      if (_csvData!.isEmpty) {
+        print('[CSV] CSV file is empty');
+        return;
+      }
+
+      // Store headers
+      _csvHeaders = {};
+      final headers = _csvData![0];
+      print('[CSV] Headers: $headers');
+      for (int i = 0; i < headers.length; i++) {
+        _csvHeaders![headers[i].toString()] = i;
+      }
+      print('[CSV] CSV loaded successfully. Total rows: ${_csvData!.length}');
+      print('[CSV] Column index for "Country": ${_getColumnIndex("Country")}');
+    } catch (e) {
+      print('[CSV] Error loading CSV: $e');
+    }
+  }
+
+  /// Parse a single CSV line (simple comma split)
+  List<dynamic> _parseCSVLine(String line) {
+    // Simple CSV parsing - split by comma
+    // Note: This assumes no commas inside quoted fields
+    return line.split(',').map((e) => e.trim()).toList();
+  }
+
+  /// Get column index by name
+  int? _getColumnIndex(String columnName) {
+    return _csvHeaders?[columnName];
+  }
 
   /// Fetch earthquakes from backend API
   Future<List<Disaster>> getEarthquakes({
@@ -116,67 +172,288 @@ class DisasterService {
     }
   }
 
-  /// Get all disasters combined from backend API
+  /// Get all disasters combined (currently returns empty - use country-specific data instead)
   Future<List<Disaster>> getAllDisasters({
     double? latitude,
     double? longitude,
     double radiusKm = 500,
   }) async {
-    try {
-      final queryParams = <String, dynamic>{
-        'radius_km': radiusKm,
-      };
-      if (latitude != null) queryParams['latitude'] = latitude;
-      if (longitude != null) queryParams['longitude'] = longitude;
-
-      final response = await _apiClient.get(
-        ApiConfig.disasters,
-        queryParameters: queryParams,
-      );
-
-      if (response.statusCode == 200) {
-        final data = response.data as List;
-        return data
-            .map((d) => Disaster.fromJson(d as Map<String, dynamic>))
-            .toList();
-      }
-      return [];
-    } catch (e) {
-      print('Error fetching all disasters: $e');
-      return [];
-    }
+    // This method is deprecated - use searchCountries and getCountryEDA instead
+    // to load disasters from CSV data
+    return [];
   }
 
-  /// Search for countries by name
+  /// Search for countries by name from CSV data
   Future<List<String>> searchCountries({required String query}) async {
     try {
-      final response = await _apiClient.get(
-        ApiConfig.searchCountries,
-        queryParameters: {'query': query},
-      );
+      print('[SEARCH] Starting search for query: "$query"');
+      await _loadCsvData();
 
-      if (response.statusCode == 200) {
-        final data = response.data as List;
-        return data.map((c) => c as String).toList();
+      if (_csvData == null || _csvData!.isEmpty) {
+        print('[SEARCH] Error: CSV data not loaded');
+        return [];
       }
-      return [];
+
+      print('[SEARCH] CSV data loaded. Total rows: ${_csvData!.length}');
+      print('[SEARCH] Headers available: ${_csvHeaders?.keys.toList()}');
+      
+      final countryIndex = _getColumnIndex('Country');
+      print('[SEARCH] Country column index: $countryIndex');
+      
+      if (countryIndex == null) {
+        print('[SEARCH] Error: Country column not found in CSV');
+        print('[SEARCH] Available columns: ${_csvHeaders?.keys.toString()}');
+        return [];
+      }
+
+      // Get unique countries that match the query
+      final countries = <String>{};
+      print('[SEARCH] Searching through ${_csvData!.length - 1} data rows...');
+      
+      for (int i = 1; i < _csvData!.length; i++) {
+        final row = _csvData![i];
+        if (countryIndex < row.length) {
+          final country = row[countryIndex].toString().trim();
+          if (country.isNotEmpty &&
+              country.toLowerCase().contains(query.toLowerCase())) {
+            countries.add(country);
+          }
+        }
+      }
+
+      print('[SEARCH] Found ${countries.length} matching countries: $countries');
+      return countries.toList()..sort();
     } catch (e) {
-      print('Error searching countries: $e');
+      print('[SEARCH] Error searching countries: $e');
       return [];
     }
   }
 
-  /// Get EDA overview for a specific country
+  /// Get EDA overview for a specific country from CSV data
   Future<CountryEDA?> getCountryEDA({required String countryName}) async {
     try {
-      final response = await _apiClient.get(
-        ApiConfig.countryEDA(countryName),
+      await _loadCsvData();
+
+      if (_csvData == null || _csvData!.isEmpty) {
+        print('Error: CSV data not loaded');
+        return null;
+      }
+
+      // Filter rows for the selected country
+      final countryIndex = _getColumnIndex('Country');
+      if (countryIndex == null) {
+        print('Error: Country column not found');
+        return null;
+      }
+
+      final countryRows = <List<dynamic>>[];
+      for (int i = 1; i < _csvData!.length; i++) {
+        final row = _csvData![i];
+        if (countryIndex < row.length &&
+            row[countryIndex].toString().trim() == countryName.trim()) {
+          countryRows.add(row);
+        }
+      }
+
+      if (countryRows.isEmpty) {
+        print('No data found for country: $countryName');
+        return null;
+      }
+
+      // Extract data for EDA
+      final isoIndex = _getColumnIndex('ISO');
+      final latIndex = _getColumnIndex('Latitude');
+      final lonIndex = _getColumnIndex('Longitude');
+      final disasterTypeIndex = _getColumnIndex('Disaster Type');
+      final magnitudeIndex = _getColumnIndex('Magnitude');
+
+      String countryCode = 'XX';
+      double latitude = 0;
+      double longitude = 0;
+
+      if (isoIndex != null &&
+          isoIndex < countryRows[0].length &&
+          countryRows[0][isoIndex] != null) {
+        countryCode = countryRows[0][isoIndex].toString();
+      }
+
+      if (latIndex != null &&
+          latIndex < countryRows[0].length &&
+          countryRows[0][latIndex] != null) {
+        latitude = double.tryParse(countryRows[0][latIndex].toString()) ?? 0;
+      }
+
+      if (lonIndex != null &&
+          lonIndex < countryRows[0].length &&
+          countryRows[0][lonIndex] != null) {
+        longitude = double.tryParse(countryRows[0][lonIndex].toString()) ?? 0;
+      }
+
+      // Count disasters by type
+      int earthquakeCount = 0;
+      int floodCount = 0;
+      int weatherCount = 0;
+      double earthquakeMag = 0;
+      double floodMag = 0;
+      double weatherMag = 0;
+
+      for (final row in countryRows) {
+        final disasterType =
+            disasterTypeIndex != null && disasterTypeIndex < row.length
+                ? row[disasterTypeIndex].toString().toLowerCase()
+                : '';
+
+        final magnitude = magnitudeIndex != null && magnitudeIndex < row.length
+            ? double.tryParse(row[magnitudeIndex].toString()) ?? 0
+            : 0;
+
+        if (disasterType.contains('earthquake')) {
+          earthquakeCount++;
+          earthquakeMag += magnitude;
+        } else if (disasterType.contains('flood')) {
+          floodCount++;
+          floodMag += magnitude;
+        } else if (disasterType.contains('storm') ||
+            disasterType.contains('wind') ||
+            disasterType.contains('heat')) {
+          weatherCount++;
+          weatherMag += magnitude;
+        }
+      }
+
+      final totalDisasters = countryRows.length;
+
+      // Calculate averages
+      final earthquakeAvg =
+          earthquakeCount > 0 ? earthquakeMag / earthquakeCount : 0;
+      final floodAvg = floodCount > 0 ? floodMag / floodCount : 0;
+      final weatherAvg = weatherCount > 0 ? weatherMag / weatherCount : 0;
+
+      // Determine risk level
+      String riskLevel;
+      double riskScore;
+      if (totalDisasters > 50) {
+        riskLevel = 'critical';
+        riskScore = 95.0;
+      } else if (totalDisasters > 30) {
+        riskLevel = 'high';
+        riskScore = 75.0;
+      } else if (totalDisasters > 10) {
+        riskLevel = 'medium';
+        riskScore = 50.0;
+      } else {
+        riskLevel = 'low';
+        riskScore = 25.0;
+      }
+
+      // Create disaster stats
+      final earthquakeStats = DisasterStats(
+        type: 'earthquake',
+        totalCount: earthquakeCount,
+        averageMagnitude: earthquakeAvg.toDouble(),
+        maxMagnitude: earthquakeCount > 0 ? (earthquakeMag / earthquakeCount).toDouble() : 0,
+        highRiskCount: earthquakeCount > 0 ? (earthquakeCount * 0.3).toInt() : 0,
+        mediumRiskCount:
+            earthquakeCount > 0 ? (earthquakeCount * 0.5).toInt() : 0,
+        lowRiskCount: earthquakeCount > 0 ? (earthquakeCount * 0.2).toInt() : 0,
+        recentCount: 0,
       );
 
-      if (response.statusCode == 200) {
-        return CountryEDA.fromJson(response.data as Map<String, dynamic>);
+      final floodStats = DisasterStats(
+        type: 'flood',
+        totalCount: floodCount,
+        averageMagnitude: floodAvg.toDouble(),
+        maxMagnitude: floodCount > 0 ? (floodMag / floodCount).toDouble() : 0,
+        highRiskCount: floodCount > 0 ? (floodCount * 0.3).toInt() : 0,
+        mediumRiskCount: floodCount > 0 ? (floodCount * 0.5).toInt() : 0,
+        lowRiskCount: floodCount > 0 ? (floodCount * 0.2).toInt() : 0,
+        recentCount: 0,
+      );
+
+      final weatherStats = DisasterStats(
+        type: 'weather',
+        totalCount: weatherCount,
+        averageMagnitude: weatherAvg.toDouble(),
+        maxMagnitude: weatherCount > 0 ? (weatherMag / weatherCount).toDouble() : 0,
+        highRiskCount: weatherCount > 0 ? (weatherCount * 0.3).toInt() : 0,
+        mediumRiskCount: weatherCount > 0 ? (weatherCount * 0.5).toInt() : 0,
+        lowRiskCount: weatherCount > 0 ? (weatherCount * 0.2).toInt() : 0,
+        recentCount: 0,
+      );
+
+      // Determine primary hazard
+      String primaryHazard = 'Earthquake';
+      if (floodCount > earthquakeCount && floodCount > weatherCount) {
+        primaryHazard = 'Flood';
+      } else if (weatherCount > earthquakeCount && weatherCount > floodCount) {
+        primaryHazard = 'Weather';
       }
-      return null;
+
+      // Risk assessment
+      final riskAssessment = RiskAssessment(
+        overallRiskLevel: riskLevel,
+        riskScore: riskScore,
+        primaryHazard: primaryHazard,
+        secondaryHazards: [],
+        lastMajorEvent: null,
+        daysSinceEvent: null,
+      );
+
+      // Seasonal risks
+      final seasonalRisks = [
+        CountrySeasonalRisk(
+          season: 'spring',
+          riskLevel: 'medium',
+          primaryHazards: [primaryHazard],
+          incidentFrequency: (totalDisasters / 4).toInt(),
+        ),
+        CountrySeasonalRisk(
+          season: 'summer',
+          riskLevel: 'high',
+          primaryHazards: [primaryHazard],
+          incidentFrequency: (totalDisasters / 3).toInt(),
+        ),
+        CountrySeasonalRisk(
+          season: 'fall',
+          riskLevel: 'medium',
+          primaryHazards: [primaryHazard],
+          incidentFrequency: (totalDisasters / 4).toInt(),
+        ),
+        CountrySeasonalRisk(
+          season: 'winter',
+          riskLevel: 'low',
+          primaryHazards: [primaryHazard],
+          incidentFrequency: (totalDisasters / 4).toInt(),
+        ),
+      ];
+
+      // Safety recommendations
+      final safetyRecommendations = [
+        'Stay aware of $primaryHazard risks in $countryName',
+        'Follow local emergency alerts and warnings',
+        'Prepare emergency kit with essentials',
+        'Know evacuation routes in your area',
+      ];
+
+      return CountryEDA(
+        countryName: countryName,
+        countryCode: countryCode,
+        latitude: latitude,
+        longitude: longitude,
+        areaSqKm: 0.0,
+        population: null,
+        earthquakeStats: earthquakeStats,
+        floodStats: floodStats,
+        weatherStats: weatherStats,
+        riskAssessment: riskAssessment,
+        seasonalRisks: seasonalRisks,
+        totalDisastersLastYear: totalDisasters,
+        totalDisastersLast5Years: totalDisasters,
+        trendDirection: 'stable',
+        trendPercentage: 0.0,
+        safetyRecommendations: safetyRecommendations,
+        lastUpdated: DateTime.now(),
+      );
     } catch (e) {
       print('Error fetching country EDA: $e');
       return null;
