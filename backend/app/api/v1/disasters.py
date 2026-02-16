@@ -102,3 +102,33 @@ async def search_countries(
     Returns a list of matching country names.
     """
     return await disaster_service.search_countries(query=query)
+
+
+@router.get("/check-risk")
+async def check_earthquake_risk(
+    latitude: float = Query(..., description="User's latitude"),
+    longitude: float = Query(..., description="User's longitude"),
+    radius_km: float = Query(500, description="Search radius in kilometers"),
+    min_magnitude: float = Query(4.0, description="Minimum earthquake magnitude"),
+    days: int = Query(7, description="Number of days to look back"),
+):
+    """
+    Check earthquake risks near the user's location.
+    Returns recent earthquakes with magnitude >= min_magnitude within the specified radius.
+    """
+    earthquakes = await disaster_service.check_earthquake_risk(
+        latitude=latitude,
+        longitude=longitude,
+        radius_km=radius_km,
+        min_magnitude=min_magnitude,
+        days=days,
+    )
+    return {
+        "user_location": {"latitude": latitude, "longitude": longitude},
+        "radius_km": radius_km,
+        "min_magnitude": min_magnitude,
+        "days_checked": days,
+        "earthquake_count": len(earthquakes),
+        "earthquakes": earthquakes,
+    }
+

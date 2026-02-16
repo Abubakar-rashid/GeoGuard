@@ -118,6 +118,87 @@ class DisasterService:
             print(f"Error fetching earthquakes near location: {e}")
             return []
 
+    async def check_earthquake_risk(
+        self,
+        latitude: float,
+        longitude: float,
+        radius_km: float = 500,
+        min_magnitude: float = 4.0,
+        days: int = 7,
+    ) -> List[dict]:
+        """
+        Check for earthquake risks near a location.
+        Returns a list of earthquakes with their details for map display.
+        """
+        import certifi
+        import ssl
+
+        try:
+            now = datetime.now()
+            start_time = now - timedelta(days=days)
+
+            params = {
+                "format": "geojson",
+                "starttime": start_time.strftime("%Y-%m-%dT%H:%M:%S"),
+                "endtime": now.strftime("%Y-%m-%dT%H:%M:%S"),
+                "latitude": str(latitude),
+                "longitude": str(longitude),
+                "maxradiuskm": str(radius_km),
+                "minmagnitude": str(min_magnitude),
+                "orderby": "time",
+            }
+
+            # Use certifi for SSL certificates
+            ssl_context = ssl.create_default_context(cafile=certifi.where())
+
+            async with httpx.AsyncClient(verify=ssl_context) as client:
+                response = await client.get(
+                    f"{self.usgs_base_url}/query",
+                    params=params,
+                    timeout=30.0,
+                )
+                response.raise_for_status()
+                data = response.json()
+
+            features = data.get("features", [])
+            earthquakes = []
+
+            for feature in features:
+                props = feature.get("properties", {})
+                geom = feature.get("geometry", {})
+                coords = geom.get("coordinates", [0, 0, 0])
+
+                magnitude = float(props.get("mag", 0) or 0)
+
+                # Calculate circle radius based on magnitude
+                # Higher magnitude = larger circle
+                circle_radius_km = magnitude * 10  # Base radius scaled by magnitude
+
+                earthquake_data = {
+                    "id": feature.get("id", ""),
+                    "time": props.get("time"),
+                    "magnitude": magnitude,
+                    "place": props.get("place", "Unknown"),
+                    "latitude": float(coords[1]),
+                    "longitude": float(coords[0]),
+                    "depth_km": float(coords[2]) if len(coords) > 2 else 0,
+                    "circle_radius_km": circle_radius_km,
+                    "severity": "high" if magnitude >= 6.0 else "medium" if magnitude >= 4.5 else "low",
+                    "distance_from_user": self._calculate_distance(
+                        latitude, longitude, float(coords[1]), float(coords[0])
+                    ),
+                }
+                earthquakes.append(earthquake_data)
+
+            # Sort by magnitude (highest first)
+            earthquakes.sort(key=lambda x: x["magnitude"], reverse=True)
+
+            return earthquakes
+
+        except Exception as e:
+            print(f"Error checking earthquake risk: {e}")
+            return []
+
     async def get_flood_warnings(
         self,
         latitude: Optional[float] = None,

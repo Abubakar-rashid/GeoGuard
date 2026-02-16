@@ -1,23 +1,48 @@
 """
-AI Assistant service using Google Gemini
+AI Assistant service using Hugging Face
 """
 
 from typing import Optional
 from app.core.config import settings
 
 try:
-    import google.generativeai as genai
-    GEMINI_AVAILABLE = True
+    from huggingface_hub import InferenceClient
+    HUGGINGFACE_AVAILABLE = True
 except ImportError:
-    GEMINI_AVAILABLE = False
+    HUGGINGFACE_AVAILABLE = False
 
 
 class AIAssistantService:
     def __init__(self):
-        self.model = None
-        if GEMINI_AVAILABLE and settings.gemini_api_key:
-            genai.configure(api_key=settings.gemini_api_key)
-            self.model = genai.GenerativeModel("gemini-pro")
+        self.client = None
+        # Use a proper text generation model (Qwen2.5 Instruct for chat)
+        self.model_id = "Qwen/Qwen2.5-1.5B-Instruct"
+        if HUGGINGFACE_AVAILABLE and settings.huggingface_api_token:
+            self.client = InferenceClient(
+                token=settings.huggingface_api_token
+            )
+
+    async def _generate_response(self, prompt: str) -> Optional[str]:
+        """Generate response using Hugging Face Inference API"""
+        if self.client is None:
+            return None
+
+        try:
+            # Use chat completion for instruction-tuned models
+            messages = [
+                {"role": "system", "content": "You are GeoGuard's AI Safety Assistant. Provide helpful, accurate information about disaster preparedness, safety procedures, and emergency response. Be concise but thorough."},
+                {"role": "user", "content": prompt}
+            ]
+            response = self.client.chat_completion(
+                model=self.model_id,
+                messages=messages,
+                max_tokens=500,
+                temperature=0.7,
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            print(f"Hugging Face API error: {e}")
+            return None
 
     async def get_safety_advice(
         self,
@@ -26,7 +51,7 @@ class AIAssistantService:
         is_emergency: bool = False,
     ) -> str:
         """Get safety advice from AI for a specific disaster type"""
-        if self.model is None:
+        if self.client is None:
             return self._get_offline_safety_advice(disaster_type)
 
         try:
@@ -35,15 +60,15 @@ class AIAssistantService:
                 user_location=user_location,
                 is_emergency=is_emergency,
             )
-            response = self.model.generate_content(prompt)
-            return response.text or self._get_offline_safety_advice(disaster_type)
+            response = await self._generate_response(prompt)
+            return response or self._get_offline_safety_advice(disaster_type)
         except Exception as e:
             print(f"AI Assistant error: {e}")
             return self._get_offline_safety_advice(disaster_type)
 
     async def chat(self, user_message: str) -> str:
         """Chat with AI assistant about disaster safety"""
-        if self.model is None:
+        if self.client is None:
             return "AI Assistant is currently unavailable. Please check your configuration."
 
         try:
@@ -56,15 +81,15 @@ User question: {user_message}
 
 Provide a helpful response focusing on safety and practical advice.
 """
-            response = self.model.generate_content(prompt)
-            return response.text or "I apologize, but I could not generate a response. Please try again."
+            response = await self._generate_response(prompt)
+            return response or "I apologize, but I could not generate a response. Please try again."
         except Exception as e:
             print(f"AI Chat error: {e}")
             return "I apologize, but I am having trouble responding right now. Please try again later."
 
     async def get_precautions(self, disaster_type: str) -> str:
         """Get precautions for specific disaster"""
-        if self.model is None:
+        if self.client is None:
             return self._get_offline_precautions(disaster_type)
 
         try:
@@ -73,14 +98,14 @@ Provide a concise list of precautions for {disaster_type} safety.
 Format as numbered steps. Be practical and actionable.
 Keep the response under 200 words.
 """
-            response = self.model.generate_content(prompt)
-            return response.text or self._get_offline_precautions(disaster_type)
+            response = await self._generate_response(prompt)
+            return response or self._get_offline_precautions(disaster_type)
         except Exception as e:
             return self._get_offline_precautions(disaster_type)
 
     async def analyze_seasonal_trends(self, region: str, month: int) -> str:
         """Analyze seasonal disaster trends"""
-        if self.model is None:
+        if self.client is None:
             return "Seasonal analysis requires AI service to be configured."
 
         try:
@@ -93,8 +118,8 @@ Include:
 3. Recommended preparations
 Keep the response concise and practical.
 """
-            response = self.model.generate_content(prompt)
-            return response.text or "Unable to analyze seasonal trends at this time."
+            response = await self._generate_response(prompt)
+            return response or "Unable to analyze seasonal trends at this time."
         except Exception as e:
             return "Unable to analyze seasonal trends at this time."
 

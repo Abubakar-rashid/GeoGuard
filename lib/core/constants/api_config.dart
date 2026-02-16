@@ -21,6 +21,7 @@ class ApiConfig {
   static String get weatherAlerts => '$apiBaseUrl/disasters/weather-alerts';
   static String get nearbyDisasters => '$apiBaseUrl/disasters/nearby';
   static String get searchCountries => '$apiBaseUrl/disasters/countries/search';
+  static String get checkRisk => '$apiBaseUrl/disasters/check-risk';
   static String countryEDA(String countryName) => '$apiBaseUrl/disasters/country/$countryName/eda';
 
 

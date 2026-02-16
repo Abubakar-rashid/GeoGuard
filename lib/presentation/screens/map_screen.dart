@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 import 'package:latlong2/latlong.dart';
 import '../../core/constants/constants.dart';
 import '../../providers/providers.dart';
@@ -22,6 +23,8 @@ class _MapScreenState extends ConsumerState<MapScreen> with TickerProviderStateM
     final userLocation = ref.watch(userLocationProvider);
     final disasters = ref.watch(filteredDisastersProvider);
     final selectedTypes = ref.watch(selectedDisasterTypesProvider);
+    final earthquakeRisk = ref.watch(earthquakeRiskProvider);
+    final isCheckingRisk = ref.watch(isCheckingRiskProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -77,6 +80,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with TickerProviderStateM
                     maxZoom: 19,
                     keepBuffer: 5,
                     panBuffer: 3,
+                    tileProvider: CancellableNetworkTileProvider(),
                     tileBuilder: (context, tileWidget, tile) {
                       return AnimatedSwitcher(
                         duration: const Duration(milliseconds: 200),
@@ -101,6 +105,22 @@ class _MapScreenState extends ConsumerState<MapScreen> with TickerProviderStateM
                     loading: () => const CircleLayer(circles: []),
                     error: (_, __) => const CircleLayer(circles: []),
                   ),
+
+                  // Earthquake Risk Circles (from Check Risk)
+                  if (earthquakeRisk != null)
+                    CircleLayer(
+                      circles: earthquakeRisk.earthquakes.map((eq) {
+                        // Calculate radius based on magnitude (bigger magnitude = bigger circle)
+                        final radius = eq.magnitude * 8; // Scale factor for visibility
+                        return CircleMarker(
+                          point: LatLng(eq.latitude, eq.longitude),
+                          radius: radius,
+                          color: _getEarthquakeRiskColor(eq.severity).withOpacity(0.4),
+                          borderColor: _getEarthquakeRiskColor(eq.severity),
+                          borderStrokeWidth: 3,
+                        );
+                      }).toList(),
+                    ),
 
                   // Disaster Markers
                   disasters.when(
@@ -317,9 +337,74 @@ class _MapScreenState extends ConsumerState<MapScreen> with TickerProviderStateM
               child: const Icon(Icons.navigation, color: AppColors.primary),
             ),
           ),
+
+          // Earthquake Risk Results Panel
+          if (earthquakeRisk != null)
+            Positioned(
+              top: 160,
+              left: 16,
+              right: 16,
+              child: _EarthquakeRiskPanel(
+                riskData: earthquakeRisk,
+                onClose: () {
+                  ref.read(earthquakeRiskProvider.notifier).state = null;
+                },
+                onEarthquakeTap: (eq) {
+                  _animatedMapMove(LatLng(eq.latitude, eq.longitude), 8);
+                },
+              ),
+            ),
         ],
       ),
     );
+  }
+
+  /// Check earthquake risk for user's location
+  Future<void> _checkEarthquakeRisk(BuildContext context, WidgetRef ref) async {
+    final location = ref.read(userLocationProvider).valueOrNull;
+    if (location == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to get your location')),
+      );
+      return;
+    }
+
+    ref.read(isCheckingRiskProvider.notifier).state = true;
+
+    try {
+      final disasterService = ref.read(disasterServiceProvider);
+      final result = await disasterService.checkEarthquakeRisk(
+        latitude: location.latitude,
+        longitude: location.longitude,
+        radiusKm: 500,
+        minMagnitude: 4.0,
+        days: 7,
+      );
+
+      ref.read(earthquakeRiskProvider.notifier).state = result;
+
+      if (result != null && result.earthquakeCount > 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Found ${result.earthquakeCount} earthquake(s) near you!'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No significant earthquakes found nearby in the last 7 days'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error checking risk: $e')),
+      );
+    } finally {
+      ref.read(isCheckingRiskProvider.notifier).state = false;
+    }
   }
 
   void _toggleFilter(WidgetRef ref, DisasterType type) {
@@ -391,6 +476,19 @@ class _MapScreenState extends ConsumerState<MapScreen> with TickerProviderStateM
         return AppColors.severityMedium;
       case SeverityLevel.low:
         return AppColors.severityLow;
+    }
+  }
+
+  Color _getEarthquakeRiskColor(String severity) {
+    switch (severity.toLowerCase()) {
+      case 'high':
+        return Colors.red;
+      case 'medium':
+        return Colors.orange;
+      case 'low':
+        return Colors.yellow.shade700;
+      default:
+        return Colors.orange;
     }
   }
 
@@ -642,3 +740,202 @@ class _FilterBottomSheet extends ConsumerWidget {
     );
   }
 }
+
+/// Panel showing earthquake risk results
+class _EarthquakeRiskPanel extends StatelessWidget {
+  final EarthquakeRiskResponse riskData;
+  final VoidCallback onClose;
+  final Function(EarthquakeRisk) onEarthquakeTap;
+
+  const _EarthquakeRiskPanel({
+    required this.riskData,
+    required this.onClose,
+    required this.onEarthquakeTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 250),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: riskData.earthquakeCount > 0 ? Colors.orange : Colors.green,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  riskData.earthquakeCount > 0
+                      ? Icons.warning_amber_rounded
+                      : Icons.check_circle,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    riskData.earthquakeCount > 0
+                        ? '${riskData.earthquakeCount} Earthquake(s) Found'
+                        : 'No Earthquakes Found',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: onClose,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+          ),
+          // Content
+          if (riskData.earthquakes.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'No significant earthquakes (magnitude ≥ 4.0) detected within 500km in the last 7 days.',
+                textAlign: TextAlign.center,
+              ),
+            )
+          else
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: riskData.earthquakes.length,
+                itemBuilder: (context, index) {
+                  final eq = riskData.earthquakes[index];
+                  return _EarthquakeListItem(
+                    earthquake: eq,
+                    onTap: () => onEarthquakeTap(eq),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Individual earthquake item in the risk panel
+class _EarthquakeListItem extends StatelessWidget {
+  final EarthquakeRisk earthquake;
+  final VoidCallback onTap;
+
+  const _EarthquakeListItem({
+    required this.earthquake,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final dateTime = earthquake.dateTime;
+    final timeStr = dateTime != null
+        ? '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}'
+        : 'Unknown time';
+
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          children: [
+            // Magnitude indicator
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: _getSeverityColor(earthquake.severity).withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _getSeverityColor(earthquake.severity),
+                  width: 2,
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  earthquake.magnitude.toStringAsFixed(1),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: _getSeverityColor(earthquake.severity),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    earthquake.place,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    timeStr,
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 12,
+                    ),
+                  ),
+                  Text(
+                    '${earthquake.distanceFromUser.toStringAsFixed(0)} km away',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Arrow
+            Icon(Icons.chevron_right, color: Colors.grey.shade400),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getSeverityColor(String severity) {
+    switch (severity.toLowerCase()) {
+      case 'high':
+        return Colors.red;
+      case 'medium':
+        return Colors.orange;
+      case 'low':
+        return Colors.yellow.shade700;
+      default:
+        return Colors.orange;
+    }
+  }
+}
+

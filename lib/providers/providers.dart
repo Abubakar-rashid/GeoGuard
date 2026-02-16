@@ -175,3 +175,16 @@ final countryEdaProvider =
 final selectedCountryProvider = StateProvider<String?>((ref) {
   return null;
 });
+
+// ============ EARTHQUAKE RISK ============
+
+/// Provider for earthquake risk data - triggered manually
+final earthquakeRiskProvider = StateProvider<EarthquakeRiskResponse?>((ref) {
+  return null;
+});
+
+/// Provider to track if risk check is loading
+final isCheckingRiskProvider = StateProvider<bool>((ref) {
+  return false;
+});
+

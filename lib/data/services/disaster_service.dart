@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import '../models/disaster_model.dart';
 import '../models/country_eda_model.dart';
+import '../models/earthquake_risk_model.dart';
 import '../../core/constants/api_config.dart';
 import 'api_client.dart';
 
@@ -141,6 +142,39 @@ class DisasterService {
     } catch (e) {
       print('Error fetching flood warnings: $e');
       return [];
+    }
+  }
+
+  /// Check earthquake risk for a location
+  /// Returns recent earthquakes near the user with magnitude >= minMagnitude
+  Future<EarthquakeRiskResponse?> checkEarthquakeRisk({
+    required double latitude,
+    required double longitude,
+    double radiusKm = 500,
+    double minMagnitude = 4.0,
+    int days = 7,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{
+        'latitude': latitude,
+        'longitude': longitude,
+        'radius_km': radiusKm,
+        'min_magnitude': minMagnitude,
+        'days': days,
+      };
+
+      final response = await _apiClient.get(
+        ApiConfig.checkRisk,
+        queryParameters: queryParams,
+      );
+
+      if (response.statusCode == 200) {
+        return EarthquakeRiskResponse.fromJson(response.data as Map<String, dynamic>);
+      }
+      return null;
+    } catch (e) {
+      print('Error checking earthquake risk: $e');
+      return null;
     }
   }
 
