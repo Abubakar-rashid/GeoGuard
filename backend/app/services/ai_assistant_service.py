@@ -3,6 +3,7 @@ AI Assistant service using Hugging Face
 """
 
 from typing import Optional
+import httpx
 from app.core.config import settings
 
 try:
@@ -15,34 +16,94 @@ except ImportError:
 class AIAssistantService:
     def __init__(self):
         self.client = None
-        # Use a proper text generation model (Qwen2.5 Instruct for chat)
-        self.model_id = "Qwen/Qwen2.5-1.5B-Instruct"
+        # Use chat-capable model, configurable via .env
+        # Example: OpenAssistant/replit-code-v1-3b (if available) or another provider-backed model.
+        self.model_id = settings.huggingface_model_id or "OpenAssistant/replit-code-v1-3b"
+
         if HUGGINGFACE_AVAILABLE and settings.huggingface_api_token:
             self.client = InferenceClient(
                 token=settings.huggingface_api_token
             )
 
     async def _generate_response(self, prompt: str) -> Optional[str]:
-        """Generate response using Hugging Face Inference API"""
-        if self.client is None:
-            return None
+        """Generate response using Hugging Face or Gemini as fallback."""
+        # First attempt Hugging Face, if configured
+        if self.client is not None:
+            try:
+                messages = [
+                    {"role": "system", "content": "You are GeoGuard's AI Safety Assistant. Provide helpful, accurate information about disaster preparedness, safety procedures, and emergency response. Be concise but thorough."},
+                    {"role": "user", "content": prompt}
+                ]
+                hf_response = self.client.chat_completion(
+                    model=self.model_id,
+                    messages=messages,
+                    max_tokens=500,
+                    temperature=0.7,
+                )
+                # Try content first, then reasoning as fallback (some HF chat models use reasoning field)
+                message_obj = hf_response.choices[0].message
+                chat_text = getattr(message_obj, 'content', None)
+                if chat_text and str(chat_text).strip():
+                    return str(chat_text).strip()
+                reasoning_text = getattr(message_obj, 'reasoning', None)
+                if reasoning_text and str(reasoning_text).strip():
+                    return str(reasoning_text).strip()
+                # If response includes an 'output' or direct text
+                if hasattr(hf_response, 'output') and hf_response.output:
+                    return str(hf_response.output).strip()
+            except Exception as e:
+                print(f"Hugging Face API chat_completion error: {e}")
 
-        try:
-            # Use chat completion for instruction-tuned models
-            messages = [
-                {"role": "system", "content": "You are GeoGuard's AI Safety Assistant. Provide helpful, accurate information about disaster preparedness, safety procedures, and emergency response. Be concise but thorough."},
-                {"role": "user", "content": prompt}
-            ]
-            response = self.client.chat_completion(
-                model=self.model_id,
-                messages=messages,
-                max_tokens=500,
-                temperature=0.7,
-            )
-            return response.choices[0].message.content
-        except Exception as e:
-            print(f"Hugging Face API error: {e}")
-            return None
+            try:
+                fallback_response = self.client.text_generation(
+                    model=self.model_id,
+                    prompt=prompt,
+                    max_new_tokens=300,
+                    temperature=0.7,
+                )
+                if isinstance(fallback_response, str):
+                    return fallback_response.strip()
+                generated = getattr(fallback_response, 'generated_text', None)
+                if generated and str(generated).strip():
+                    return str(generated).strip()
+                if isinstance(fallback_response, dict):
+                    candidate = fallback_response.get('generated_text') or fallback_response.get('text')
+                    if candidate:
+                        return str(candidate).strip()
+            except Exception as e:
+                print(f"Hugging Face API text_generation error: {e}")
+
+        # If HF fails, try Gemini (text generation endpoint)
+        if settings.gemini_api_key:
+            try:
+                gemini_url = f"https://generativelanguage.googleapis.com/v1beta2/models/{settings.gemini_model_id}:generate"
+                response = httpx.post(
+                    gemini_url,
+                    params={"key": settings.gemini_api_key},
+                    json={
+                        "prompt": {
+                            "text": prompt
+                        },
+                        "temperature": 0.7,
+                        "maxOutputTokens": 300
+                    },
+                    timeout=30,
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    candidate = None
+                    if "candidates" in data and data["candidates"]:
+                        candidate = data["candidates"][0].get("output")
+                    if not candidate:
+                        candidate = data.get("output") or data.get("text")
+                    if candidate:
+                        return str(candidate).strip()
+                else:
+                    print(f"Gemini API returned status {response.status_code}: {response.text}")
+            except Exception as e:
+                print(f"Gemini API error: {e}")
+
+        return None
 
     async def get_safety_advice(
         self,

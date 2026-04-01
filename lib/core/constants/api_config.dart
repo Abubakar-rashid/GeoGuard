@@ -1,18 +1,35 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 /// API configuration for GeoGuard backend
 class ApiConfig {
   ApiConfig._();
 
   /// Base URL for the backend API
-  /// Change this to your production URL when deploying
-  static const String baseUrl = 'http://10.0.2.2:8000'; // Android emulator
-  // static const String baseUrl = 'http://localhost:8000'; // iOS simulator / Web
-  // static const String baseUrl = 'https://your-production-url.com'; // Production
+  /// Automatically selects local emulator URL for Android and localhost for other targets.
+  static String get baseUrl {
+    if (kIsWeb) {
+      return 'http://localhost:8000';
+    }
+    if (Platform.isAndroid) {
+      return 'http://10.0.2.2:8000';
+    }
+    // iOS Simulator and desktop (macOS, linux, windows) use localhost
+    return 'http://localhost:8000';
+  }
+
+  // For manual override (optional): set environment variable in your launch config
+  // e.g. --dart-define=API_BASE_URL=http://192.168.1.10:8000
+  static String get apiBaseUrl {
+    const envBaseUrl = String.fromEnvironment('API_BASE_URL');
+    if (envBaseUrl.isNotEmpty) {
+      return envBaseUrl;
+    }
+    return '$baseUrl$apiVersion';
+  }
 
   /// API version prefix
   static const String apiVersion = '/api/v1';
-
-  /// Full API base URL
-  static String get apiBaseUrl => '$baseUrl$apiVersion';
 
   /// Endpoints
   static String get disasters => '$apiBaseUrl/disasters';
