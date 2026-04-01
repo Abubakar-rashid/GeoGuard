@@ -31,7 +31,10 @@ class AIAssistantService:
         if self.client is not None:
             try:
                 messages = [
-                    {"role": "system", "content": "You are GeoGuard's AI Safety Assistant. Provide helpful, accurate information about disaster preparedness, safety procedures, and emergency response. Be concise but thorough."},
+                    {
+                        "role": "system",
+                        "content": "You are GeoGuard's AI Safety Assistant. Do not output internal reasoning or 'Thinking Process'. Only give clear, concise safety advice in plain language. Provide direct practical steps for the user."
+                    },
                     {"role": "user", "content": prompt}
                 ]
                 hf_response = self.client.chat_completion(
@@ -44,13 +47,22 @@ class AIAssistantService:
                 message_obj = hf_response.choices[0].message
                 chat_text = getattr(message_obj, 'content', None)
                 if chat_text and str(chat_text).strip():
-                    return str(chat_text).strip()
+                    normalized = str(chat_text).strip()
+                    if normalized.lower().startswith('thinking process'):
+                        normalized = normalized.split('\n', 1)[-1].strip()
+                    return normalized
                 reasoning_text = getattr(message_obj, 'reasoning', None)
                 if reasoning_text and str(reasoning_text).strip():
-                    return str(reasoning_text).strip()
+                    normalized = str(reasoning_text).strip()
+                    if normalized.lower().startswith('thinking process'):
+                        normalized = normalized.split('\n', 1)[-1].strip()
+                    return normalized
                 # If response includes an 'output' or direct text
                 if hasattr(hf_response, 'output') and hf_response.output:
-                    return str(hf_response.output).strip()
+                    output_text = str(hf_response.output).strip()
+                    if output_text.lower().startswith('thinking process'):
+                        output_text = output_text.split('\n', 1)[-1].strip()
+                    return output_text
             except Exception as e:
                 print(f"Hugging Face API chat_completion error: {e}")
 
