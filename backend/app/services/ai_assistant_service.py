@@ -4,6 +4,7 @@ AI Assistant service using Hugging Face
 
 from typing import Optional
 import httpx
+import re
 from app.core.config import settings
 
 try:
@@ -25,6 +26,29 @@ class AIAssistantService:
                 token=settings.huggingface_api_token
             )
 
+    def _strip_thinking_content(self, text: str) -> str:
+        """Remove thinking process, reasoning tags, and internal processing from response."""
+        if not text:
+            return text
+        
+        # Remove <thinking>...</thinking> tags and their content
+        text = re.sub(r'<thinking>.*?</thinking>', '', text, flags=re.DOTALL)
+        
+        # Remove other thinking markers
+        text = re.sub(r'<internal_reasoning>.*?</internal_reasoning>', '', text, flags=re.DOTALL)
+        text = re.sub(r'\*\*thinking.*?\*\*', '', text, flags=re.DOTALL | re.IGNORECASE)
+        text = re.sub(r'thinking process:.*?(?=\n\n|\Z)', '', text, flags=re.IGNORECASE)
+        
+        # Remove leading "Thinking..." or "Processing..." lines
+        lines = text.split('\n')
+        filtered_lines = []
+        for line in lines:
+            if not re.match(r'^\s*(thinking|processing|internal|reasoning).*:', line, re.IGNORECASE):
+                filtered_lines.append(line)
+        
+        text = '\n'.join(filtered_lines).strip()
+        return text
+
     async def _generate_response(self, prompt: str) -> Optional[str]:
         """Generate response using Hugging Face or Gemini as fallback."""
         # First attempt Hugging Face, if configured
@@ -40,29 +64,23 @@ class AIAssistantService:
                 hf_response = self.client.chat_completion(
                     model=self.model_id,
                     messages=messages,
-                    max_tokens=500,
+                    max_tokens=2500,
                     temperature=0.7,
                 )
                 # Try content first, then reasoning as fallback (some HF chat models use reasoning field)
                 message_obj = hf_response.choices[0].message
                 chat_text = getattr(message_obj, 'content', None)
                 if chat_text and str(chat_text).strip():
-                    normalized = str(chat_text).strip()
-                    if normalized.lower().startswith('thinking process'):
-                        normalized = normalized.split('\n', 1)[-1].strip()
-                    return normalized
+                    normalized = self._strip_thinking_content(str(chat_text).strip())
+                    return normalized if normalized else None
                 reasoning_text = getattr(message_obj, 'reasoning', None)
                 if reasoning_text and str(reasoning_text).strip():
-                    normalized = str(reasoning_text).strip()
-                    if normalized.lower().startswith('thinking process'):
-                        normalized = normalized.split('\n', 1)[-1].strip()
-                    return normalized
+                    normalized = self._strip_thinking_content(str(reasoning_text).strip())
+                    return normalized if normalized else None
                 # If response includes an 'output' or direct text
                 if hasattr(hf_response, 'output') and hf_response.output:
-                    output_text = str(hf_response.output).strip()
-                    if output_text.lower().startswith('thinking process'):
-                        output_text = output_text.split('\n', 1)[-1].strip()
-                    return output_text
+                    output_text = self._strip_thinking_content(str(hf_response.output).strip())
+                    return output_text if output_text else None
             except Exception as e:
                 print(f"Hugging Face API chat_completion error: {e}")
 
@@ -70,18 +88,21 @@ class AIAssistantService:
                 fallback_response = self.client.text_generation(
                     model=self.model_id,
                     prompt=prompt,
-                    max_new_tokens=300,
+                    max_new_tokens=2500,
                     temperature=0.7,
                 )
                 if isinstance(fallback_response, str):
-                    return fallback_response.strip()
+                    cleaned = self._strip_thinking_content(fallback_response.strip())
+                    return cleaned if cleaned else None
                 generated = getattr(fallback_response, 'generated_text', None)
                 if generated and str(generated).strip():
-                    return str(generated).strip()
+                    cleaned = self._strip_thinking_content(str(generated).strip())
+                    return cleaned if cleaned else None
                 if isinstance(fallback_response, dict):
                     candidate = fallback_response.get('generated_text') or fallback_response.get('text')
                     if candidate:
-                        return str(candidate).strip()
+                        cleaned = self._strip_thinking_content(str(candidate).strip())
+                        return cleaned if cleaned else None
             except Exception as e:
                 print(f"Hugging Face API text_generation error: {e}")
 
@@ -97,7 +118,7 @@ class AIAssistantService:
                             "text": prompt
                         },
                         "temperature": 0.7,
-                        "maxOutputTokens": 300
+                        "maxOutputTokens": 2500
                     },
                     timeout=30,
                 )
@@ -109,7 +130,8 @@ class AIAssistantService:
                     if not candidate:
                         candidate = data.get("output") or data.get("text")
                     if candidate:
-                        return str(candidate).strip()
+                        cleaned = self._strip_thinking_content(str(candidate).strip())
+                        return cleaned if cleaned else None
                 else:
                     print(f"Gemini API returned status {response.status_code}: {response.text}")
             except Exception as e:
