@@ -1,5 +1,5 @@
 """
-AI Assistant service using Hugging Face
+AI Assistant service using Groq (with fallback providers)
 """
 
 from typing import Optional
@@ -20,6 +20,8 @@ class AIAssistantService:
         # Use chat-capable model, configurable via .env
         # Example: OpenAssistant/replit-code-v1-3b (if available) or another provider-backed model.
         self.model_id = settings.huggingface_model_id or "OpenAssistant/replit-code-v1-3b"
+        self.groq_api_key = settings.groq_api_key
+        self.groq_model = settings.groq_model or "llama-3.1-8b-instant"
 
         if HUGGINGFACE_AVAILABLE and settings.huggingface_api_token:
             self.client = InferenceClient(
@@ -50,7 +52,45 @@ class AIAssistantService:
         return text
 
     async def _generate_response(self, prompt: str) -> Optional[str]:
-        """Generate response using Hugging Face or Gemini as fallback."""
+        """Generate response using Groq first, then Hugging Face or Gemini as fallback."""
+        # First attempt Groq chat completions
+        if self.groq_api_key:
+            try:
+                groq_url = "https://api.groq.com/openai/v1/chat/completions"
+                response = httpx.post(
+                    groq_url,
+                    headers={
+                        "Authorization": f"Bearer {self.groq_api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": self.groq_model,
+                        "messages": [
+                            {
+                                "role": "system",
+                                "content": "You are GeoGuard's AI Safety Assistant. Do not output internal reasoning. Give clear, concise, practical disaster safety advice.",
+                            },
+                            {"role": "user", "content": prompt},
+                        ],
+                        "temperature": 0.7,
+                        "max_tokens": 1200,
+                    },
+                    timeout=30,
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    choices = data.get("choices") or []
+                    if choices:
+                        message = choices[0].get("message") or {}
+                        content = message.get("content")
+                        if content and str(content).strip():
+                            cleaned = self._strip_thinking_content(str(content).strip())
+                            return cleaned if cleaned else None
+                else:
+                    print(f"Groq API returned status {response.status_code}: {response.text}")
+            except Exception as e:
+                print(f"Groq API error: {e}")
+
         # First attempt Hugging Face, if configured
         if self.client is not None:
             try:
@@ -146,7 +186,7 @@ class AIAssistantService:
         is_emergency: bool = False,
     ) -> str:
         """Get safety advice from AI for a specific disaster type"""
-        if self.client is None:
+        if self.client is None and not self.groq_api_key:
             return self._get_offline_safety_advice(disaster_type)
 
         try:
@@ -163,7 +203,7 @@ class AIAssistantService:
 
     async def chat(self, user_message: str) -> str:
         """Chat with AI assistant about disaster safety"""
-        if self.client is None:
+        if self.client is None and not self.groq_api_key:
             return "AI Assistant is currently unavailable. Please check your configuration."
 
         try:
@@ -184,7 +224,7 @@ Provide a helpful response focusing on safety and practical advice.
 
     async def get_precautions(self, disaster_type: str) -> str:
         """Get precautions for specific disaster"""
-        if self.client is None:
+        if self.client is None and not self.groq_api_key:
             return self._get_offline_precautions(disaster_type)
 
         try:
@@ -200,7 +240,7 @@ Keep the response under 200 words.
 
     async def analyze_seasonal_trends(self, region: str, month: int) -> str:
         """Analyze seasonal disaster trends"""
-        if self.client is None:
+        if self.client is None and not self.groq_api_key:
             return "Seasonal analysis requires AI service to be configured."
 
         try:

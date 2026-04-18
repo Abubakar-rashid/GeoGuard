@@ -4,6 +4,7 @@ import '../../core/constants/constants.dart';
 import '../../providers/providers.dart';
 import '../../data/models/models.dart';
 import '../widgets/widgets.dart';
+import 'ai_assistant_screen.dart';
 import 'country_eda_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -16,90 +17,102 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              const HomeHeader(),
-              const SizedBox(height: 20),
-
-              // Safety Status Card
-              safetyState.when(
-                data: (state) => SafetyStatusCard(safetyState: state),
-                loading: () => const SafetyStatusCardLoading(),
-                error: (_, __) => const SafetyStatusCard(
-                  safetyState: SafetyState(
-                    status: SafetyStatus.safe,
-                    message: 'Unable to determine status',
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Quick Actions
-              const Text(
-                AppStrings.quickActions,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              const QuickActionsGrid(),
-              const SizedBox(height: 24),
-
-              // Country Analysis Card
-              _CountryAnalysisCard(),
-              const SizedBox(height: 24),
-
-              // Recent Alerts Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Stack(
+        children: [
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Header
+                  const HomeHeader(),
+                  const SizedBox(height: 20),
+
+                  // Country Analysis Card
+                  _CountryAnalysisCard(),
+                  const SizedBox(height: 20),
+
+                  // Safety Status Card
+                  safetyState.when(
+                    data: (state) => SafetyStatusCard(safetyState: state),
+                    loading: () => const SafetyStatusCardLoading(),
+                    error: (_, __) => const SafetyStatusCard(
+                      safetyState: SafetyState(
+                        status: SafetyStatus.safe,
+                        message: 'Unable to determine status',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Quick Actions
                   const Text(
-                    AppStrings.recentAlerts,
+                    AppStrings.quickActions,
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary,
                     ),
                   ),
-                  TextButton(
-                    onPressed: () {
-                      // Navigate to all alerts
-                    },
-                    child: const Text(
-                      AppStrings.viewAll,
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w500,
+                  const SizedBox(height: 12),
+                  const QuickActionsGrid(),
+                  const SizedBox(height: 24),
+
+                  // Recent Alerts Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        AppStrings.recentAlerts,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
+                      TextButton(
+                        onPressed: () {
+                          // Navigate to all alerts
+                        },
+                        child: const Text(
+                          AppStrings.viewAll,
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Recent Alerts List
+                  disasters.when(
+                    data: (list) => RecentAlertsList(disasters: list.take(3).toList()),
+                    loading: () => const RecentAlertsLoading(),
+                    error: (_, __) => const Center(
+                      child: Text('Unable to load alerts'),
                     ),
                   ),
+                  const SizedBox(height: 96),
                 ],
               ),
-              const SizedBox(height: 8),
-
-              // Recent Alerts List
-              disasters.when(
-                data: (list) => RecentAlertsList(disasters: list.take(3).toList()),
-                loading: () => const RecentAlertsLoading(),
-                error: (_, __) => const Center(
-                  child: Text('Unable to load alerts'),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // AI Safety Assistant Card
-              const AIAssistantCard(),
-              const SizedBox(height: 20),
-            ],
+            ),
           ),
-        ),
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: _AIAssistantFloatingButton(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AIAssistantScreen()),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -155,25 +168,21 @@ class _CountryAnalysisCard extends StatelessWidget {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const CountryEdaScreen()),
+          MaterialPageRoute(
+            builder: (context) => const CountryEdaScreen(),
+          ),
         );
       },
       child: Container(
-        padding: const EdgeInsets.all(16),
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF00B4D8), Color(0xFF0096C7)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+          gradient: LinearGradient(
+            colors: [Colors.cyan.shade600, Colors.cyan.shade400],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
           ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.shade200,
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
           children: [
@@ -181,7 +190,7 @@ class _CountryAnalysisCard extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: const Icon(
                 Icons.public,
@@ -190,35 +199,81 @@ class _CountryAnalysisCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 16),
-            Expanded(
+            const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    AppStrings.countryEdasearch,
+                  Text(
+                    'Country Analysis',
                     style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
                       color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4),
                   Text(
                     'Search country disaster risk',
                     style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white,
+                      fontSize: 14,
                     ),
                   ),
                 ],
               ),
             ),
-            Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.white.withOpacity(0.8),
-              size: 18,
+            const Icon(
+              Icons.chevron_right,
+              color: Colors.white,
+              size: 32,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AIAssistantFloatingButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _AIAssistantFloatingButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(28),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            gradient: AppColors.aiGradient,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.pink.withOpacity(0.28),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.auto_awesome, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Text(
+                AppStrings.aiSafetyAssistant,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

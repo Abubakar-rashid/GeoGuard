@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/constants.dart';
-import '../../data/models/models.dart';
+
 
 class SurvivalGuideScreen extends ConsumerStatefulWidget {
   const SurvivalGuideScreen({super.key});
@@ -22,6 +22,11 @@ class _SurvivalGuideScreenState extends ConsumerState<SurvivalGuideScreen> {
       icon: Icons.public,
       iconBgColor: Colors.green.shade100,
       iconColor: Colors.green.shade700,
+      relatedGuides: const [
+        'Drop, Cover, Hold On',
+        'Aftershock Safety',
+        'Home Hazard Check',
+      ],
     ),
     _GuideCategory(
       title: 'Flood Preparedness',
@@ -30,6 +35,11 @@ class _SurvivalGuideScreenState extends ConsumerState<SurvivalGuideScreen> {
       icon: Icons.water_drop,
       iconBgColor: Colors.blue.shade100,
       iconColor: Colors.blue.shade700,
+      relatedGuides: const [
+        'Evacuation Route Plan',
+        'Floodwater Do Not Enter',
+        'Safe Drinking Water',
+      ],
     ),
     _GuideCategory(
       title: 'Severe Weather',
@@ -38,6 +48,11 @@ class _SurvivalGuideScreenState extends ConsumerState<SurvivalGuideScreen> {
       icon: Icons.cloud,
       iconBgColor: Colors.purple.shade100,
       iconColor: Colors.purple.shade700,
+      relatedGuides: const [
+        'Storm Shelter Basics',
+        'Power Outage Readiness',
+        'Lightning Safety',
+      ],
     ),
     _GuideCategory(
       title: 'First Aid Basics',
@@ -46,6 +61,11 @@ class _SurvivalGuideScreenState extends ConsumerState<SurvivalGuideScreen> {
       icon: Icons.medical_services,
       iconBgColor: Colors.red.shade100,
       iconColor: Colors.red.shade700,
+      relatedGuides: const [
+        'CPR Quick Steps',
+        'Bleeding Control',
+        'Burn and Fracture Care',
+      ],
     ),
   ];
 
@@ -153,6 +173,7 @@ class _GuideCategory {
   final IconData icon;
   final Color iconBgColor;
   final Color iconColor;
+  final List<String> relatedGuides;
 
   _GuideCategory({
     required this.title,
@@ -161,6 +182,7 @@ class _GuideCategory {
     required this.icon,
     required this.iconBgColor,
     required this.iconColor,
+    required this.relatedGuides,
   });
 }
 
@@ -208,7 +230,7 @@ class _OfflineModeCard extends StatelessWidget {
           Switch(
             value: isEnabled,
             onChanged: onToggle,
-            activeColor: AppColors.primary,
+            activeThumbColor: AppColors.primary,
           ),
         ],
       ),
@@ -265,6 +287,25 @@ class _CategoryCard extends StatelessWidget {
                         style: TextStyle(fontSize: 11, color: Colors.green.shade600),
                       ),
                     ],
+                  ),
+                ],
+                if ((category.relatedGuides).isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Builder(
+                    builder: (_) {
+                      final guidesText = category.relatedGuides.where((g) => g.trim().isNotEmpty).join(', ');
+                      if (guidesText.isEmpty) return const SizedBox.shrink();
+                      return Text(
+                        'Relevant guides: $guidesText',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade700,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      );
+                    },
                   ),
                 ],
               ],

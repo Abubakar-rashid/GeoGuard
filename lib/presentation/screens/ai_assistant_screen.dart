@@ -256,17 +256,60 @@ class _ChatBubble extends StatelessWidget {
               ),
               const SizedBox(height: 8),
             ],
-            Text(
-              message.text,
-              style: TextStyle(
-                color: message.isUser ? Colors.white : AppColors.textPrimary,
-                fontSize: 14,
-              ),
+            _MessageText(
+              text: message.text,
+              isUser: message.isUser,
             ),
           ],
         ),
       ),
     );
+  }
+}
+
+class _MessageText extends StatelessWidget {
+  final String text;
+  final bool isUser;
+
+  const _MessageText({required this.text, required this.isUser});
+
+  @override
+  Widget build(BuildContext context) {
+    return SelectableText.rich(
+      _buildTextSpan(text),
+      style: TextStyle(
+        color: isUser ? Colors.white : AppColors.textPrimary,
+        fontSize: 14,
+        height: 1.35,
+      ),
+    );
+  }
+
+  TextSpan _buildTextSpan(String source) {
+    final spans = <InlineSpan>[];
+    final regex = RegExp(r'\*\*(.+?)\*\*');
+    var start = 0;
+
+    for (final match in regex.allMatches(source)) {
+      if (match.start > start) {
+        spans.add(TextSpan(text: source.substring(start, match.start)));
+      }
+
+      final boldText = match.group(1) ?? '';
+      spans.add(
+        TextSpan(
+          text: boldText,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      );
+      start = match.end;
+    }
+
+    if (start < source.length) {
+      spans.add(TextSpan(text: source.substring(start)));
+    }
+
+    return TextSpan(children: spans);
   }
 }
 

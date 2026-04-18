@@ -183,8 +183,32 @@ final earthquakeRiskProvider = StateProvider<EarthquakeRiskResponse?>((ref) {
   return null;
 });
 
-/// Provider to track if risk check is loading
+/// Provider to track if earthquake risk check is loading
 final isCheckingRiskProvider = StateProvider<bool>((ref) {
+  return false;
+});
+
+// ============ FLOOD RISK ============
+
+/// Provider for flood risk data - triggered manually when the Flood chip is tapped
+final floodRiskProvider = StateProvider<FloodRiskResponse?>((ref) {
+  return null;
+});
+
+/// Provider to track if flood risk check is loading
+final isCheckingFloodRiskProvider = StateProvider<bool>((ref) {
+  return false;
+});
+
+// ============ WEATHER RISK ============
+
+/// Provider for weather risk data - triggered manually when the Weather chip is tapped
+final weatherRiskProvider = StateProvider<WeatherRiskResponse?>((ref) {
+  return null;
+});
+
+/// Provider to track if weather risk check is loading
+final isCheckingWeatherRiskProvider = StateProvider<bool>((ref) {
   return false;
 });
 

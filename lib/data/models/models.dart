@@ -6,3 +6,5 @@ export 'survival_guide_model.dart';
 export 'safety_state_model.dart';
 export 'country_eda_model.dart';
 export 'earthquake_risk_model.dart';
+export 'flood_risk_model.dart';
+export 'weather_risk_model.dart';

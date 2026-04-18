@@ -12,12 +12,15 @@ class Settings(BaseSettings):
     huggingface_api_token: str = ""
     google_maps_api_key: str = ""
     gemini_api_key: str = ""
+    groq_api_key: str = ""
+    tomorrow_api_key: str = ""
 
     # AI models
     # Hugging Face model ID (for HF path)
     huggingface_model_id: str = "Qwen/Qwen3.5-9B"
     # Gemini model ID (for Gemini path). Example: text-bison-001
     gemini_model_id: str = "text-bison-001"
+    groq_model: str = "llama-3.1-8b-instant"
 
     # External API URLs
     usgs_base_url: str = "https://earthquake.usgs.gov/fdsnws/event/1"

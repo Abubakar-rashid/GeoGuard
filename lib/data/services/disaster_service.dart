@@ -2,6 +2,8 @@ import 'package:flutter/services.dart';
 import '../models/disaster_model.dart';
 import '../models/country_eda_model.dart';
 import '../models/earthquake_risk_model.dart';
+import '../models/flood_risk_model.dart';
+import '../models/weather_risk_model.dart';
 import '../../core/constants/api_config.dart';
 import 'api_client.dart';
 
@@ -146,11 +148,11 @@ class DisasterService {
   }
 
   /// Check earthquake risk for a location
-  /// Returns recent earthquakes near the user with magnitude >= minMagnitude
+  /// Returns recent earthquakes near the user with magnitude >= minMagnitude within 1000 km
   Future<EarthquakeRiskResponse?> checkEarthquakeRisk({
     required double latitude,
     required double longitude,
-    double radiusKm = 500,
+    double radiusKm = 1000,
     double minMagnitude = 4.0,
     int days = 7,
   }) async {
@@ -174,6 +176,60 @@ class DisasterService {
       return null;
     } catch (e) {
       print('Error checking earthquake risk: $e');
+      return null;
+    }
+  }
+
+  /// Check flood risk for a location using Open-Meteo Flood API.
+  /// Returns daily river discharge data with LOW / MODERATE / HIGH risk ratings.
+  Future<FloodRiskResponse?> checkFloodRisk({
+    required double latitude,
+    required double longitude,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{
+        'latitude': latitude,
+        'longitude': longitude,
+      };
+
+      final response = await _apiClient.get(
+        ApiConfig.checkFloodRisk,
+        queryParameters: queryParams,
+      );
+
+      if (response.statusCode == 200) {
+        return FloodRiskResponse.fromJson(response.data as Map<String, dynamic>);
+      }
+      return null;
+    } catch (e) {
+      print('Error checking flood risk: $e');
+      return null;
+    }
+  }
+
+  /// Check weather risk for a location using Tomorrow.io Forecast API.
+  /// Returns daily weather data with LOW / WINDY / HEAT / MODERATE / HIGH risk ratings.
+  Future<WeatherRiskResponse?> checkWeatherRisk({
+    required double latitude,
+    required double longitude,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{
+        'latitude': latitude,
+        'longitude': longitude,
+      };
+
+      final response = await _apiClient.get(
+        ApiConfig.checkWeatherRisk,
+        queryParameters: queryParams,
+      );
+
+      if (response.statusCode == 200) {
+        return WeatherRiskResponse.fromJson(response.data as Map<String, dynamic>);
+      }
+      return null;
+    } catch (e) {
+      print('Error checking weather risk: $e');
       return null;
     }
   }

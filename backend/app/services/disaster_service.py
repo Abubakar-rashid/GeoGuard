@@ -1,6 +1,4 @@
-"""
-Disaster service for fetching disaster data from external APIs and local CSV
-"""
+
 
 import httpx
 import pandas as pd

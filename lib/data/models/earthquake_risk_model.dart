@@ -69,6 +69,8 @@ class EarthquakeRiskResponse extends Equatable {
   final double minMagnitude;
   final int daysChecked;
   final int earthquakeCount;
+  final bool threatDetected;
+  final String message;
   final List<EarthquakeRisk> earthquakes;
 
   const EarthquakeRiskResponse({
@@ -78,6 +80,8 @@ class EarthquakeRiskResponse extends Equatable {
     required this.minMagnitude,
     required this.daysChecked,
     required this.earthquakeCount,
+    this.threatDetected = false,
+    this.message = '',
     required this.earthquakes,
   });
 
@@ -88,10 +92,12 @@ class EarthquakeRiskResponse extends Equatable {
     return EarthquakeRiskResponse(
       userLatitude: (userLocation?['latitude'] as num?)?.toDouble() ?? 0.0,
       userLongitude: (userLocation?['longitude'] as num?)?.toDouble() ?? 0.0,
-      radiusKm: (json['radius_km'] as num?)?.toDouble() ?? 500.0,
+      radiusKm: (json['radius_km'] as num?)?.toDouble() ?? 1000.0,
       minMagnitude: (json['min_magnitude'] as num?)?.toDouble() ?? 4.0,
       daysChecked: json['days_checked'] as int? ?? 7,
       earthquakeCount: json['earthquake_count'] as int? ?? 0,
+      threatDetected: json['threat_detected'] as bool? ?? false,
+      message: json['message'] as String? ?? '',
       earthquakes: earthquakesList
           .map((e) => EarthquakeRisk.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -106,6 +112,8 @@ class EarthquakeRiskResponse extends Equatable {
         minMagnitude,
         daysChecked,
         earthquakeCount,
+        threatDetected,
+        message,
         earthquakes,
       ];
 }

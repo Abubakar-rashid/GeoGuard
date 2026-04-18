@@ -39,6 +39,8 @@ class ApiConfig {
   static String get nearbyDisasters => '$apiBaseUrl/disasters/nearby';
   static String get searchCountries => '$apiBaseUrl/disasters/countries/search';
   static String get checkRisk => '$apiBaseUrl/disasters/check-risk';
+  static String get checkFloodRisk => '$apiBaseUrl/disasters/check-flood-risk';
+  static String get checkWeatherRisk => '$apiBaseUrl/disasters/check-weather-risk';
   static String countryEDA(String countryName) => '$apiBaseUrl/disasters/country/$countryName/eda';
 
 

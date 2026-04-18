@@ -253,73 +253,89 @@ class _SOSHeaderState extends State<_SOSHeader> with SingleTickerProviderStateMi
           bottomRight: Radius.circular(30),
         ),
       ),
-      child: Column(
+      child: Stack(
         children: [
-          GestureDetector(
-            onLongPressStart: _onLongPressStart,
-            onLongPressEnd: _onLongPressEnd,
-            child: AnimatedBuilder(
-              animation: _controller,
-              builder: (context, child) {
-                return Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.2),
-                    border: Border.all(color: Colors.white, width: 3),
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Progress indicator
-                      SizedBox(
-                        width: 100,
-                        height: 100,
-                        child: CircularProgressIndicator(
-                          value: _controller.value,
-                          strokeWidth: 4,
-                          valueColor: const AlwaysStoppedAnimation(Colors.white),
-                          backgroundColor: Colors.white.withOpacity(0.3),
-                        ),
-                      ),
-                      // SOS Icon
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.2),
-                        ),
-                        child: const Icon(
-                          Icons.priority_high,
-                          color: Colors.white,
-                          size: 50,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
+          Positioned(
+            top: 0,
+            left: 12,
+            child: SafeArea(
+              bottom: false,
+              child: IconButton(
+                onPressed: () => Navigator.of(context).maybePop(),
+                icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+                tooltip: 'Back',
+              ),
             ),
           ),
-          const SizedBox(height: 20),
-          const Text(
-            AppStrings.emergencySOS,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            AppStrings.pressAndHold,
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-            ),
-            textAlign: TextAlign.center,
+          Column(
+            children: [
+              GestureDetector(
+                onLongPressStart: _onLongPressStart,
+                onLongPressEnd: _onLongPressEnd,
+                child: AnimatedBuilder(
+                  animation: _controller,
+                  builder: (context, child) {
+                    return Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withOpacity(0.2),
+                        border: Border.all(color: Colors.white, width: 3),
+                      ),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Progress indicator
+                          SizedBox(
+                            width: 100,
+                            height: 100,
+                            child: CircularProgressIndicator(
+                              value: _controller.value,
+                              strokeWidth: 4,
+                              valueColor: const AlwaysStoppedAnimation(Colors.white),
+                              backgroundColor: Colors.white.withOpacity(0.3),
+                            ),
+                          ),
+                          // SOS Icon
+                          Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withOpacity(0.2),
+                            ),
+                            child: const Icon(
+                              Icons.priority_high,
+                              color: Colors.white,
+                              size: 50,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                AppStrings.emergencySOS,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                AppStrings.pressAndHold,
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
         ],
       ),
