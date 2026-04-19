@@ -227,7 +227,7 @@ class _CountryEdaScreenState extends ConsumerState<CountryEdaScreen> {
         _DisasterStatsCard(
           title: AppStrings.weatherStatistics,
           stats: eda.weatherStats,
-          color: Colors.purple,
+          color: AppColors.aiAccent,
         ),
         const SizedBox(height: 24),
 

@@ -97,10 +97,11 @@ class _AIAssistantScreenState extends ConsumerState<AIAssistantScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surface,
+              border: Border(top: BorderSide(color: AppColors.border)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.shade200,
+                  color: Colors.black.withOpacity(0.03),
                   blurRadius: 8,
                   offset: const Offset(0, -2),
                 ),
@@ -119,7 +120,7 @@ class _AIAssistantScreenState extends ConsumerState<AIAssistantScreen> {
                         borderSide: BorderSide.none,
                       ),
                       filled: true,
-                      fillColor: Colors.grey.shade100,
+                      fillColor: AppColors.surfaceMuted,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 20,
                         vertical: 12,
@@ -131,7 +132,7 @@ class _AIAssistantScreenState extends ConsumerState<AIAssistantScreen> {
                 const SizedBox(width: 12),
                 Container(
                   decoration: BoxDecoration(
-                    gradient: AppColors.aiGradient,
+                    color: AppColors.aiAccent,
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
@@ -209,7 +210,10 @@ class _ChatBubble extends StatelessWidget {
           maxWidth: MediaQuery.of(context).size.width * 0.8,
         ),
         decoration: BoxDecoration(
-          color: message.isUser ? AppColors.primary : Colors.white,
+          color: message.isUser ? AppColors.primary : AppColors.surface,
+          border: Border.all(
+            color: message.isUser ? Colors.transparent : AppColors.border,
+          ),
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
@@ -234,7 +238,7 @@ class _ChatBubble extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      gradient: AppColors.aiGradient,
+                      color: AppColors.aiAccent,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(

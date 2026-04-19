@@ -67,6 +67,87 @@ final allDisastersProvider = FutureProvider<List<Disaster>>((ref) async {
   );
 });
 
+final riskAnalyticsInsightProvider = FutureProvider<String>((ref) async {
+  final disasters = await ref.watch(allDisastersProvider.future);
+
+  if (disasters.isEmpty) {
+    return 'No active hazard feed is available yet. Once disaster data loads, this section will summarize the current risk pattern.';
+  }
+
+  final earthquakeCount = disasters
+      .where((d) => d.type == DisasterType.earthquake)
+      .length;
+  final floodCount = disasters
+      .where((d) => d.type == DisasterType.flood)
+      .length;
+  final weatherCount = disasters
+      .where((d) => d.type == DisasterType.weather)
+      .length;
+  final highCount = disasters
+      .where((d) => d.severity == SeverityLevel.high)
+      .length;
+  final mediumCount = disasters
+      .where((d) => d.severity == SeverityLevel.medium)
+      .length;
+  final lowCount = disasters
+      .where((d) => d.severity == SeverityLevel.low)
+      .length;
+
+  final total = disasters.length;
+  final dominantHazard = {
+    'Earthquakes': earthquakeCount,
+    'Floods': floodCount,
+    'Weather alerts': weatherCount,
+  }..removeWhere((_, value) => value == 0);
+
+  final sortedDominant = dominantHazard.entries.toList()
+    ..sort((left, right) => right.value.compareTo(left.value));
+
+  final topHazard = sortedDominant.isNotEmpty
+      ? sortedDominant.first.key
+      : 'mixed hazards';
+  final highShare = (highCount / total * 100).round();
+  final mediumShare = (mediumCount / total * 100).round();
+  final lowShare = (lowCount / total * 100).round();
+
+  final now = DateTime.now();
+  final lastThreeDays = disasters
+      .where((d) => now.difference(d.timestamp).inDays <= 2)
+      .length;
+  final priorFourDays = disasters.where((d) {
+    final age = now.difference(d.timestamp).inDays;
+    return age >= 3 && age <= 6;
+  }).length;
+
+  final trendDescription = lastThreeDays > priorFourDays
+      ? 'activity is rising'
+      : lastThreeDays < priorFourDays
+      ? 'activity is easing'
+      : 'activity is steady';
+
+  final prompt = StringBuffer()
+    ..writeln(
+      'You are summarizing a disaster analytics dashboard for a safety app.',
+    )
+    ..writeln('Write 3 concise bullets and 1 practical action line.')
+    ..writeln('Use calm, direct language. Avoid jargon.')
+    ..writeln('Data:')
+    ..writeln('- total events: $total')
+    ..writeln('- earthquakes: $earthquakeCount')
+    ..writeln('- floods: $floodCount')
+    ..writeln('- weather alerts: $weatherCount')
+    ..writeln(
+      '- severity high/medium/low: $highShare/$mediumShare/$lowShare percent',
+    )
+    ..writeln('- last 3 days events: $lastThreeDays')
+    ..writeln('- previous 4 days events: $priorFourDays')
+    ..writeln('- trend: $trendDescription')
+    ..writeln('- dominant hazard: $topHazard');
+
+  final aiAssistant = ref.watch(aiAssistantServiceProvider);
+  return aiAssistant.chat(prompt.toString());
+});
+
 // ============ SAFETY STATUS ============
 
 final safetyStateProvider = FutureProvider<SafetyState>((ref) async {
@@ -136,7 +217,9 @@ final filteredDisastersProvider = FutureProvider<List<Disaster>>((ref) async {
 
 // ============ EMERGENCY CONTACTS ============
 
-final emergencyContactsProvider = FutureProvider<List<EmergencyContact>>((ref) async {
+final emergencyContactsProvider = FutureProvider<List<EmergencyContact>>((
+  ref,
+) async {
   final storage = ref.watch(localStorageServiceProvider);
   return storage.getEmergencyContacts();
 });
@@ -160,14 +243,18 @@ final locationTrackingProvider = StateProvider<bool>((ref) {
 
 // ============ COUNTRY EDA ============
 
-final countrySearchProvider = 
-    FutureProvider.family<List<String>, String>((ref, query) async {
+final countrySearchProvider = FutureProvider.family<List<String>, String>((
+  ref,
+  query,
+) async {
   final disasterService = ref.watch(disasterServiceProvider);
   return disasterService.searchCountries(query: query);
 });
 
-final countryEdaProvider = 
-    FutureProvider.family<CountryEDA?, String>((ref, countryName) async {
+final countryEdaProvider = FutureProvider.family<CountryEDA?, String>((
+  ref,
+  countryName,
+) async {
   final disasterService = ref.watch(disasterServiceProvider);
   return disasterService.getCountryEDA(countryName: countryName);
 });
@@ -211,4 +298,3 @@ final weatherRiskProvider = StateProvider<WeatherRiskResponse?>((ref) {
 final isCheckingWeatherRiskProvider = StateProvider<bool>((ref) {
   return false;
 });
-

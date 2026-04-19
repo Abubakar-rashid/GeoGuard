@@ -32,6 +32,7 @@ class SafetyStatusCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.black.withOpacity(0.04)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -142,11 +143,12 @@ class SafetyStatusCardLoading extends StatelessWidget {
       height: 180,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.grey.shade300,
+        color: AppColors.surfaceMuted,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
       ),
       child: const Center(
-        child: CircularProgressIndicator(color: Colors.white),
+        child: CircularProgressIndicator(color: AppColors.primary),
       ),
     );
   }

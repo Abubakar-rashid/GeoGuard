@@ -29,11 +29,12 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
+          border: Border(top: BorderSide(color: AppColors.border.withOpacity(0.85))),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.shade200,
-              blurRadius: 10,
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 12,
               offset: const Offset(0, -2),
             ),
           ],

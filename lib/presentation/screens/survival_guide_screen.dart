@@ -46,8 +46,8 @@ class _SurvivalGuideScreenState extends ConsumerState<SurvivalGuideScreen> {
       steps: 5,
       isOffline: true,
       icon: Icons.cloud,
-      iconBgColor: Colors.purple.shade100,
-      iconColor: Colors.purple.shade700,
+      iconBgColor: AppColors.aiAccent.withOpacity(0.12),
+      iconColor: AppColors.aiAccent,
       relatedGuides: const [
         'Storm Shelter Basics',
         'Power Outage Readiness',

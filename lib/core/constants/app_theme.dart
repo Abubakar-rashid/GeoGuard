@@ -10,9 +10,16 @@ class AppTheme {
       brightness: Brightness.light,
       primaryColor: AppColors.primary,
       scaffoldBackgroundColor: AppColors.background,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.primary,
-        brightness: Brightness.light,
+      colorScheme: const ColorScheme.light(
+        primary: AppColors.primary,
+        secondary: AppColors.weather,
+        surface: AppColors.surface,
+        background: AppColors.background,
+        error: AppColors.danger,
+        onPrimary: Colors.white,
+        onSecondary: Colors.white,
+        onSurface: AppColors.textPrimary,
+        onBackground: AppColors.textPrimary,
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.surface,
@@ -27,9 +34,10 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: AppColors.cardBackground,
-        elevation: 2,
+        elevation: 1,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(22),
+          side: const BorderSide(color: AppColors.border),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -55,7 +63,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.surface,
+        fillColor: AppColors.surfaceMuted,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -74,7 +82,7 @@ class AppTheme {
         selectedItemColor: AppColors.primary,
         unselectedItemColor: AppColors.textSecondary,
         type: BottomNavigationBarType.fixed,
-        elevation: 8,
+        elevation: 6,
       ),
     );
   }
@@ -84,22 +92,30 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       primaryColor: AppColors.primary,
-      scaffoldBackgroundColor: const Color(0xFF121212),
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.primary,
-        brightness: Brightness.dark,
+      scaffoldBackgroundColor: const Color(0xFF111613),
+      colorScheme: const ColorScheme.dark(
+        primary: AppColors.primaryLight,
+        secondary: AppColors.weather,
+        surface: Color(0xFF18201C),
+        background: Color(0xFF111613),
+        error: AppColors.danger,
+        onPrimary: Colors.white,
+        onSecondary: Colors.white,
+        onSurface: Color(0xFFF1EEE7),
+        onBackground: Color(0xFFF1EEE7),
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF1E1E1E),
-        foregroundColor: Colors.white,
+        backgroundColor: Color(0xFF111613),
+        foregroundColor: Color(0xFFF1EEE7),
         elevation: 0,
         centerTitle: true,
       ),
       cardTheme: CardThemeData(
-        color: const Color(0xFF1E1E1E),
-        elevation: 2,
+        color: const Color(0xFF18201C),
+        elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFF27322D)),
         ),
       ),
     );

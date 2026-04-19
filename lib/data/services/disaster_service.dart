@@ -13,7 +13,8 @@ class DisasterService {
   List<List<dynamic>>? _csvData;
   Map<String, dynamic>? _csvHeaders;
 
-  DisasterService({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
+  DisasterService({ApiClient? apiClient})
+    : _apiClient = apiClient ?? ApiClient();
 
   /// Load and parse CSV data from assets
   Future<void> _loadCsvData() async {
@@ -21,22 +22,24 @@ class DisasterService {
 
     try {
       print('[CSV] Starting to load CSV from assets...');
-      final csvString = await rootBundle.loadString('assets/data/cleaned-data.csv');
+      final csvString = await rootBundle.loadString(
+        'assets/data/cleaned-data.csv',
+      );
       print('[CSV] Loaded CSV string, length: ${csvString.length}');
-      
+
       // Parse CSV using simple string splitting
       final lines = csvString.split('\n');
       print('[CSV] Total lines: ${lines.length}');
-      
+
       _csvData = [];
       for (final line in lines) {
         if (line.isNotEmpty) {
           _csvData!.add(_parseCSVLine(line));
         }
       }
-      
+
       print('[CSV] Converted to CSV data, rows: ${_csvData!.length}');
-      
+
       if (_csvData!.isEmpty) {
         print('[CSV] CSV file is empty');
         return;
@@ -171,7 +174,9 @@ class DisasterService {
       );
 
       if (response.statusCode == 200) {
-        return EarthquakeRiskResponse.fromJson(response.data as Map<String, dynamic>);
+        return EarthquakeRiskResponse.fromJson(
+          response.data as Map<String, dynamic>,
+        );
       }
       return null;
     } catch (e) {
@@ -198,7 +203,9 @@ class DisasterService {
       );
 
       if (response.statusCode == 200) {
-        return FloodRiskResponse.fromJson(response.data as Map<String, dynamic>);
+        return FloodRiskResponse.fromJson(
+          response.data as Map<String, dynamic>,
+        );
       }
       return null;
     } catch (e) {
@@ -225,7 +232,9 @@ class DisasterService {
       );
 
       if (response.statusCode == 200) {
-        return WeatherRiskResponse.fromJson(response.data as Map<String, dynamic>);
+        return WeatherRiskResponse.fromJson(
+          response.data as Map<String, dynamic>,
+        );
       }
       return null;
     } catch (e) {
@@ -268,9 +277,20 @@ class DisasterService {
     double? longitude,
     double radiusKm = 500,
   }) async {
-    // This method is deprecated - use searchCountries and getCountryEDA instead
-    // to load disasters from CSV data
-    return [];
+    final results = await Future.wait([
+      getEarthquakes(
+        latitude: latitude,
+        longitude: longitude,
+        radiusKm: radiusKm,
+      ),
+      getFloodWarnings(latitude: latitude, longitude: longitude),
+      getWeatherAlerts(latitude: latitude, longitude: longitude),
+    ]);
+
+    final combined = <Disaster>[...results[0], ...results[1], ...results[2]];
+
+    combined.sort((left, right) => right.timestamp.compareTo(left.timestamp));
+    return combined;
   }
 
   /// Search for countries by name from CSV data
@@ -286,10 +306,10 @@ class DisasterService {
 
       print('[SEARCH] CSV data loaded. Total rows: ${_csvData!.length}');
       print('[SEARCH] Headers available: ${_csvHeaders?.keys.toList()}');
-      
+
       final countryIndex = _getColumnIndex('Country');
       print('[SEARCH] Country column index: $countryIndex');
-      
+
       if (countryIndex == null) {
         print('[SEARCH] Error: Country column not found in CSV');
         print('[SEARCH] Available columns: ${_csvHeaders?.keys.toString()}');
@@ -299,7 +319,7 @@ class DisasterService {
       // Get unique countries that match the query
       final countries = <String>{};
       print('[SEARCH] Searching through ${_csvData!.length - 1} data rows...');
-      
+
       for (int i = 1; i < _csvData!.length; i++) {
         final row = _csvData![i];
         if (countryIndex < row.length) {
@@ -311,7 +331,9 @@ class DisasterService {
         }
       }
 
-      print('[SEARCH] Found ${countries.length} matching countries: $countries');
+      print(
+        '[SEARCH] Found ${countries.length} matching countries: $countries',
+      );
       return countries.toList()..sort();
     } catch (e) {
       print('[SEARCH] Error searching countries: $e');
@@ -390,8 +412,8 @@ class DisasterService {
       for (final row in countryRows) {
         final disasterType =
             disasterTypeIndex != null && disasterTypeIndex < row.length
-                ? row[disasterTypeIndex].toString().toLowerCase()
-                : '';
+            ? row[disasterTypeIndex].toString().toLowerCase()
+            : '';
 
         final magnitude = magnitudeIndex != null && magnitudeIndex < row.length
             ? double.tryParse(row[magnitudeIndex].toString()) ?? 0
@@ -414,8 +436,9 @@ class DisasterService {
       final totalDisasters = countryRows.length;
 
       // Calculate averages
-      final earthquakeAvg =
-          earthquakeCount > 0 ? earthquakeMag / earthquakeCount : 0;
+      final earthquakeAvg = earthquakeCount > 0
+          ? earthquakeMag / earthquakeCount
+          : 0;
       final floodAvg = floodCount > 0 ? floodMag / floodCount : 0;
       final weatherAvg = weatherCount > 0 ? weatherMag / weatherCount : 0;
 
@@ -441,10 +464,15 @@ class DisasterService {
         type: 'earthquake',
         totalCount: earthquakeCount,
         averageMagnitude: earthquakeAvg.toDouble(),
-        maxMagnitude: earthquakeCount > 0 ? (earthquakeMag / earthquakeCount).toDouble() : 0,
-        highRiskCount: earthquakeCount > 0 ? (earthquakeCount * 0.3).toInt() : 0,
-        mediumRiskCount:
-            earthquakeCount > 0 ? (earthquakeCount * 0.5).toInt() : 0,
+        maxMagnitude: earthquakeCount > 0
+            ? (earthquakeMag / earthquakeCount).toDouble()
+            : 0,
+        highRiskCount: earthquakeCount > 0
+            ? (earthquakeCount * 0.3).toInt()
+            : 0,
+        mediumRiskCount: earthquakeCount > 0
+            ? (earthquakeCount * 0.5).toInt()
+            : 0,
         lowRiskCount: earthquakeCount > 0 ? (earthquakeCount * 0.2).toInt() : 0,
         recentCount: 0,
       );
@@ -464,7 +492,9 @@ class DisasterService {
         type: 'weather',
         totalCount: weatherCount,
         averageMagnitude: weatherAvg.toDouble(),
-        maxMagnitude: weatherCount > 0 ? (weatherMag / weatherCount).toDouble() : 0,
+        maxMagnitude: weatherCount > 0
+            ? (weatherMag / weatherCount).toDouble()
+            : 0,
         highRiskCount: weatherCount > 0 ? (weatherCount * 0.3).toInt() : 0,
         mediumRiskCount: weatherCount > 0 ? (weatherCount * 0.5).toInt() : 0,
         lowRiskCount: weatherCount > 0 ? (weatherCount * 0.2).toInt() : 0,
@@ -550,4 +580,3 @@ class DisasterService {
     }
   }
 }
-

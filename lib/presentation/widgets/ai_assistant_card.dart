@@ -17,11 +17,12 @@ class AIAssistantCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          gradient: AppColors.aiGradient,
+          color: AppColors.aiAccent,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withOpacity(0.08)),
           boxShadow: [
             BoxShadow(
-              color: Colors.pink.withOpacity(0.3),
+              color: AppColors.aiAccent.withOpacity(0.16),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -32,7 +33,7 @@ class AIAssistantCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(

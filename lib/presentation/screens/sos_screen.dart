@@ -267,75 +267,77 @@ class _SOSHeaderState extends State<_SOSHeader> with SingleTickerProviderStateMi
               ),
             ),
           ),
-          Column(
-            children: [
-              GestureDetector(
-                onLongPressStart: _onLongPressStart,
-                onLongPressEnd: _onLongPressEnd,
-                child: AnimatedBuilder(
-                  animation: _controller,
-                  builder: (context, child) {
-                    return Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white.withOpacity(0.2),
-                        border: Border.all(color: Colors.white, width: 3),
-                      ),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          // Progress indicator
-                          SizedBox(
-                            width: 100,
-                            height: 100,
-                            child: CircularProgressIndicator(
-                              value: _controller.value,
-                              strokeWidth: 4,
-                              valueColor: const AlwaysStoppedAnimation(Colors.white),
-                              backgroundColor: Colors.white.withOpacity(0.3),
+          Center(
+            child: Column(
+              children: [
+                GestureDetector(
+                  onLongPressStart: _onLongPressStart,
+                  onLongPressEnd: _onLongPressEnd,
+                  child: AnimatedBuilder(
+                    animation: _controller,
+                    builder: (context, child) {
+                      return Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(0.2),
+                          border: Border.all(color: Colors.white, width: 3),
+                        ),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // Progress indicator
+                            SizedBox(
+                              width: 100,
+                              height: 100,
+                              child: CircularProgressIndicator(
+                                value: _controller.value,
+                                strokeWidth: 4,
+                                valueColor: const AlwaysStoppedAnimation(Colors.white),
+                                backgroundColor: Colors.white.withOpacity(0.3),
+                              ),
                             ),
-                          ),
-                          // SOS Icon
-                          Container(
-                            width: 80,
-                            height: 80,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white.withOpacity(0.2),
+                            // SOS Icon
+                            Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white.withOpacity(0.2),
+                              ),
+                              child: const Icon(
+                                Icons.priority_high,
+                                color: Colors.white,
+                                size: 50,
+                              ),
                             ),
-                            child: const Icon(
-                              Icons.priority_high,
-                              color: Colors.white,
-                              size: 50,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                AppStrings.emergencySOS,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+                const SizedBox(height: 20),
+                const Text(
+                  AppStrings.emergencySOS,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                AppStrings.pressAndHold,
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
+                const SizedBox(height: 8),
+                const Text(
+                  AppStrings.pressAndHold,
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -349,22 +351,22 @@ class _InfoCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.blue.shade50,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.shade100),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+              Icon(Icons.info_outline, color: AppColors.primaryDark, size: 20),
               const SizedBox(width: 8),
               Text(
                 AppStrings.whatHappens,
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  color: Colors.blue.shade700,
+                  color: AppColors.primaryDark,
                 ),
               ),
             ],
@@ -418,7 +420,7 @@ class _EmergencyContactCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isEmergencyService ? AppColors.sosRed.withOpacity(0.1) : Colors.white,
+        color: isEmergencyService ? AppColors.sosRed.withOpacity(0.08) : AppColors.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isEmergencyService ? AppColors.sosRed.withOpacity(0.3) : Colors.grey.shade200,
@@ -494,8 +496,9 @@ class _ShareLocationButton extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: AppColors.surfaceMuted,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,

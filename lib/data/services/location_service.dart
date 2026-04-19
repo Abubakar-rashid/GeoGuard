@@ -1,6 +1,5 @@
 import 'package:geolocator/geolocator.dart';
 import '../models/user_location_model.dart';
-import 'dart:math' as math;
 
 class LocationService {
   /// Check and request location permissions

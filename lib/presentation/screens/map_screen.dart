@@ -1334,14 +1334,7 @@ class _FloodRiskPanel extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        _headerColor,
-                        _headerColor.withValues(alpha: 0.75),
-                      ],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
+                    color: _headerColor,
                     borderRadius: BorderRadius.vertical(
                       top: const Radius.circular(18),
                       bottom: isExpanded
@@ -1691,14 +1684,7 @@ class _WeatherRiskPanel extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        _headerColor,
-                        _headerColor.withValues(alpha: 0.75),
-                      ],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
+                    color: _headerColor,
                     borderRadius: BorderRadius.vertical(
                       top: const Radius.circular(18),
                       bottom: isExpanded ? Radius.zero : const Radius.circular(18),

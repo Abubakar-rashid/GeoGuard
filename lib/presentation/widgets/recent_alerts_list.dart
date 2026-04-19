@@ -13,8 +13,9 @@ class RecentAlertsList extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
         ),
         child: const Center(
           child: Text(
@@ -44,11 +45,12 @@ class _AlertCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.shade100,
+            color: Colors.black.withOpacity(0.03),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -113,34 +115,30 @@ class _DisasterIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     IconData icon;
-    List<Color> gradientColors;
+    Color tint;
 
     switch (type) {
       case DisasterType.earthquake:
         icon = Icons.public;
-        gradientColors = [Colors.brown.shade400, Colors.green.shade600];
+        tint = AppColors.earthquake.withOpacity(0.14);
         break;
       case DisasterType.flood:
         icon = Icons.water_drop;
-        gradientColors = [Colors.blue.shade400, Colors.blue.shade600];
+        tint = AppColors.flood.withOpacity(0.14);
         break;
       case DisasterType.weather:
         icon = Icons.cloud;
-        gradientColors = [Colors.purple.shade400, Colors.orange.shade400];
+        tint = AppColors.weather.withOpacity(0.14);
         break;
     }
 
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: gradientColors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: tint,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Icon(icon, color: Colors.white, size: 20),
+      child: Icon(icon, color: AppColors.textPrimary, size: 20),
     );
   }
 }
