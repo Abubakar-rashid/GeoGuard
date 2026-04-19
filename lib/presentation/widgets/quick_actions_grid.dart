@@ -13,7 +13,7 @@ class QuickActionsGrid extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: 12,
       crossAxisSpacing: 12,
-      childAspectRatio: 1.4,
+      childAspectRatio: 1.12,
       children: [
         _QuickActionCard(
           icon: Icons.map_outlined,
@@ -115,82 +115,53 @@ class _QuickActionCard extends StatelessWidget {
               children: [
                 Container(height: 4, color: iconColor.withOpacity(0.9)),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Center(
-                          child: Container(
-                            width: 58,
-                            height: 58,
-                            decoration: BoxDecoration(
-                              color: backgroundColor.withOpacity(0.85),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: iconColor.withOpacity(0.18),
-                              ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: backgroundColor.withOpacity(0.85),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: iconColor.withOpacity(0.18),
                             ),
-                            child: Icon(icon, color: iconColor, size: 28),
+                          ),
+                          child: Icon(icon, color: iconColor, size: 28),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          title,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            color: AppColors.textPrimary,
                           ),
                         ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            title,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                              color: AppColors.textPrimary,
-                            ),
+                        const SizedBox(height: 3),
+                        Text(
+                          subtitle,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                            height: 1.2,
                           ),
-                          const SizedBox(height: 3),
-                          Text(
-                            subtitle,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                              height: 1.2,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: backgroundColor.withOpacity(0.4),
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: Text(
-                                  'Open',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: iconColor,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Icon(
-                                Icons.chevron_right_rounded,
-                                size: 18,
-                                color: iconColor,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
