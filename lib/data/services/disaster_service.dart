@@ -27,18 +27,10 @@ class DisasterService {
       );
       print('[CSV] Loaded CSV string, length: ${csvString.length}');
 
-      // Parse CSV using simple string splitting
-      final lines = csvString.split('\n');
-      print('[CSV] Total lines: ${lines.length}');
+      // Parse CSV with quoted fields so columns stay aligned.
+      _csvData = _parseCsvString(csvString);
 
-      _csvData = [];
-      for (final line in lines) {
-        if (line.isNotEmpty) {
-          _csvData!.add(_parseCSVLine(line));
-        }
-      }
-
-      print('[CSV] Converted to CSV data, rows: ${_csvData!.length}');
+      print('[CSV] Parsed CSV data, rows: ${_csvData!.length}');
 
       if (_csvData!.isEmpty) {
         print('[CSV] CSV file is empty');
@@ -52,6 +44,7 @@ class DisasterService {
       for (int i = 0; i < headers.length; i++) {
         _csvHeaders![headers[i].toString()] = i;
       }
+
       print('[CSV] CSV loaded successfully. Total rows: ${_csvData!.length}');
       print('[CSV] Column index for "Country": ${_getColumnIndex("Country")}');
     } catch (e) {
@@ -59,11 +52,75 @@ class DisasterService {
     }
   }
 
-  /// Parse a single CSV line (simple comma split)
+  /// Parse a CSV string into rows while preserving quoted commas and quotes.
+  List<List<dynamic>> _parseCsvString(String csvString) {
+    final rows = <List<dynamic>>[];
+    final rowBuffer = StringBuffer();
+    var inQuotes = false;
+
+    for (var i = 0; i < csvString.length; i++) {
+      final char = csvString[i];
+
+      if (char == '"') {
+        final nextIsQuote = i + 1 < csvString.length && csvString[i + 1] == '"';
+        if (nextIsQuote) {
+          rowBuffer.write('"');
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+        continue;
+      }
+
+      if ((char == '\n' || char == '\r') && !inQuotes) {
+        if (rowBuffer.isNotEmpty) {
+          rows.add(_parseCSVLine(rowBuffer.toString()));
+          rowBuffer.clear();
+        }
+        continue;
+      }
+
+      rowBuffer.write(char);
+    }
+
+    if (rowBuffer.isNotEmpty) {
+      rows.add(_parseCSVLine(rowBuffer.toString()));
+    }
+
+    return rows;
+  }
+
+  /// Parse a single CSV line with support for quoted commas.
   List<dynamic> _parseCSVLine(String line) {
-    // Simple CSV parsing - split by comma
-    // Note: This assumes no commas inside quoted fields
-    return line.split(',').map((e) => e.trim()).toList();
+    final values = <String>[];
+    final buffer = StringBuffer();
+    var inQuotes = false;
+
+    for (var i = 0; i < line.length; i++) {
+      final char = line[i];
+
+      if (char == '"') {
+        final nextIsQuote = i + 1 < line.length && line[i + 1] == '"';
+        if (nextIsQuote) {
+          buffer.write('"');
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+        continue;
+      }
+
+      if (char == ',' && !inQuotes) {
+        values.add(buffer.toString().trim());
+        buffer.clear();
+        continue;
+      }
+
+      buffer.write(char);
+    }
+
+    values.add(buffer.toString().trim());
+    return values;
   }
 
   /// Get column index by name
@@ -378,6 +435,7 @@ class DisasterService {
       final lonIndex = _getColumnIndex('Longitude');
       final disasterTypeIndex = _getColumnIndex('Disaster Type');
       final magnitudeIndex = _getColumnIndex('Magnitude');
+      final magnitudeScaleIndex = _getColumnIndex('Magnitude Scale');
 
       String countryCode = 'XX';
       double latitude = 0;
@@ -415,21 +473,30 @@ class DisasterService {
             ? row[disasterTypeIndex].toString().toLowerCase()
             : '';
 
+        final magnitudeScale = magnitudeScaleIndex != null && magnitudeScaleIndex < row.length
+            ? row[magnitudeScaleIndex].toString().toLowerCase()
+            : '';
+
         final magnitude = magnitudeIndex != null && magnitudeIndex < row.length
             ? double.tryParse(row[magnitudeIndex].toString()) ?? 0
             : 0;
 
         if (disasterType.contains('earthquake')) {
           earthquakeCount++;
-          earthquakeMag += magnitude;
+          // Only add magnitude if it's "Moment Magnitude" (valid earthquake scale)
+          if (magnitudeScale.contains('moment') && magnitude > 0) {
+            earthquakeMag += magnitude;
+          }
         } else if (disasterType.contains('flood')) {
           floodCount++;
-          floodMag += magnitude;
+          // Floods don't have valid magnitude values (they have area in Km²)
+          // So we skip adding magnitude for floods
         } else if (disasterType.contains('storm') ||
             disasterType.contains('wind') ||
             disasterType.contains('heat')) {
           weatherCount++;
-          weatherMag += magnitude;
+          // Weather events also typically don't have magnitude in the expected format
+          // So we skip adding magnitude for weather events
         }
       }
 
