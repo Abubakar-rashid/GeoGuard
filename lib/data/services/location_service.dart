@@ -33,7 +33,9 @@ class LocationService {
       }
 
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        // Use medium accuracy (network/cell triangulation) for a fast ~1 s
+        // initial fix instead of waiting 5–15 s for a full GPS satellite lock.
+        desiredAccuracy: LocationAccuracy.medium,
       );
 
       return UserLocation(

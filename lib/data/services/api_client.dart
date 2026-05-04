@@ -9,8 +9,11 @@ class ApiClient {
       : _dio = dio ??
             Dio(BaseOptions(
               baseUrl: ApiConfig.baseUrl,
-              connectTimeout: const Duration(seconds: 30),
-              receiveTimeout: const Duration(seconds: 30),
+              // Fail fast: 8 s to connect, 15 s to receive a full response.
+              // Previously 30 s each meant a ~60 s freeze when the backend
+              // was unreachable.
+              connectTimeout: const Duration(seconds: 8),
+              receiveTimeout: const Duration(seconds: 15),
               headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',

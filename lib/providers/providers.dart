@@ -31,11 +31,18 @@ final localStorageServiceProvider = Provider<LocalStorageService>((ref) {
 // ============ LOCATION ============
 
 final userLocationProvider = FutureProvider<UserLocation?>((ref) async {
+  // keepAlive: prevents re-fetching location on every tab switch.
+  // The location is stable for the session; a fresh GPS fix is not needed
+  // each time the user navigates between screens.
+  ref.keepAlive();
   final locationService = ref.watch(locationServiceProvider);
   return locationService.getCurrentLocation();
 });
 
 final locationStreamProvider = StreamProvider<UserLocation>((ref) {
+  // keepAlive: keeps the stream alive so it doesn't restart (and restart
+  // the GPS hardware) each time a subscriber comes and goes.
+  ref.keepAlive();
   final locationService = ref.watch(locationServiceProvider);
   return locationService.getLocationStream();
 });
@@ -58,6 +65,9 @@ final earthquakesProvider = FutureProvider<List<Disaster>>((ref) async {
 });
 
 final allDisastersProvider = FutureProvider<List<Disaster>>((ref) async {
+  // keepAlive: avoids re-fetching all 3 disaster APIs on every tab switch.
+  // Data is refreshed only on a full app restart or explicit user action.
+  ref.keepAlive();
   final disasterService = ref.watch(disasterServiceProvider);
   final location = await ref.watch(userLocationProvider.future);
 

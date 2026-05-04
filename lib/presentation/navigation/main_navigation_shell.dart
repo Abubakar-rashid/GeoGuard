@@ -12,20 +12,49 @@ class MainNavigationShell extends StatefulWidget {
 class _MainNavigationShellState extends State<MainNavigationShell> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    MapScreen(),
-    SOSScreen(),
-    SurvivalGuideScreen(),
-    SettingsScreen(),
-  ];
+  // Track which tabs have been visited so we only build them on first visit.
+  // The home screen (index 0) is always pre-built.
+  final Set<int> _visitedIndices = {0};
+
+  // Lazily-built screens: returns a placeholder until the tab is first tapped.
+  Widget _buildScreen(int index) {
+    if (!_visitedIndices.contains(index)) {
+      return const SizedBox.shrink();
+    }
+    switch (index) {
+      case 0:
+        return const HomeScreen();
+      case 1:
+        return const MapScreen();
+      case 2:
+        return const SOSScreen();
+      case 3:
+        return const SurvivalGuideScreen();
+      case 4:
+        return const SettingsScreen();
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  void _onTabTapped(int index) {
+    if (!_visitedIndices.contains(index)) {
+      // First visit — build the screen now.
+      setState(() {
+        _visitedIndices.add(index);
+        _currentIndex = index;
+      });
+    } else {
+      setState(() => _currentIndex = index);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+        children: List.generate(5, _buildScreen),
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -50,32 +79,32 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
                   activeIcon: Icons.home,
                   label: AppStrings.home,
                   isSelected: _currentIndex == 0,
-                  onTap: () => setState(() => _currentIndex = 0),
+                  onTap: () => _onTabTapped(0),
                 ),
                 _NavItem(
                   icon: Icons.map_outlined,
                   activeIcon: Icons.map,
                   label: AppStrings.map,
                   isSelected: _currentIndex == 1,
-                  onTap: () => setState(() => _currentIndex = 1),
+                  onTap: () => _onTabTapped(1),
                 ),
                 _SOSNavItem(
                   isSelected: _currentIndex == 2,
-                  onTap: () => setState(() => _currentIndex = 2),
+                  onTap: () => _onTabTapped(2),
                 ),
                 _NavItem(
                   icon: Icons.menu_book_outlined,
                   activeIcon: Icons.menu_book,
                   label: AppStrings.guide,
                   isSelected: _currentIndex == 3,
-                  onTap: () => setState(() => _currentIndex = 3),
+                  onTap: () => _onTabTapped(3),
                 ),
                 _NavItem(
                   icon: Icons.person_outline,
                   activeIcon: Icons.person,
                   label: AppStrings.profile,
                   isSelected: _currentIndex == 4,
-                  onTap: () => setState(() => _currentIndex = 4),
+                  onTap: () => _onTabTapped(4),
                 ),
               ],
             ),
