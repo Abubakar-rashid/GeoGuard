@@ -97,17 +97,23 @@ class _MapScreenState extends ConsumerState<MapScreen>
                         'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.geoguard.app',
                     maxZoom: 19,
-                    keepBuffer: 8,
-                    panBuffer: 5,
+                    // Reduced buffers: loading 8/5 extra tiles was causing
+                    // heavy network + render pressure. 2/1 is enough for
+                    // smooth panning without excess tile fetching.
+                    keepBuffer: 2,
+                    panBuffer: 1,
                     tileProvider: CancellableNetworkTileProvider(),
                   ),
 
-                  // ── Generic disaster circles (only when no type-specific
-                  //    risk panel is active for that type — avoids double
-                  //    rendering and the huge pixel-radius blobs).
+                  // ── Combined: filter disasters once, build both
+                  //    CircleLayer and MarkerLayer from the same list.
+                  //    Previously disasters.when() was called twice,
+                  //    causing the list to be filtered/iterated twice
+                  //    on every build.
                   disasters.when(
                     data: (disasterList) {
-                      final filtered = disasterList.where((d) {
+                      // Single filter pass for both layers.
+                      final visible = disasterList.where((d) {
                         if (d.type == DisasterType.earthquake &&
                             earthquakeRisk != null) { return false; }
                         if (d.type == DisasterType.flood &&
@@ -116,26 +122,66 @@ class _MapScreenState extends ConsumerState<MapScreen>
                             weatherRisk != null) { return false; }
                         return true;
                       }).toList();
-                      return CircleLayer(
-                        circles: filtered
-                            .map((d) => CircleMarker(
-                                  point:
-                                      LatLng(d.latitude, d.longitude),
-                                  // Use actual metres so circles are
-                                  // geographically accurate.
-                                  radius: d.radiusKm * 1000,
-                                  useRadiusInMeter: true,
-                                  color: _getSeverityColor(d.severity)
-                                      .withValues(alpha: 0.25),
-                                  borderColor:
-                                      _getSeverityColor(d.severity),
-                                  borderStrokeWidth: 2,
-                                ))
-                            .toList(),
+
+                      return Stack(
+                        children: [
+                          CircleLayer(
+                            circles: visible
+                                .map((d) => CircleMarker(
+                                      point: LatLng(
+                                          d.latitude, d.longitude),
+                                      radius: d.radiusKm * 1000,
+                                      useRadiusInMeter: true,
+                                      color: _getSeverityColor(
+                                              d.severity)
+                                          .withValues(alpha: 0.25),
+                                      borderColor:
+                                          _getSeverityColor(d.severity),
+                                      borderStrokeWidth: 2,
+                                    ))
+                                .toList(),
+                          ),
+                          MarkerLayer(
+                            markers: [
+                              if (location != null)
+                                Marker(
+                                  point: LatLng(location.latitude,
+                                      location.longitude),
+                                  width: 40,
+                                  height: 40,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                          color: Colors.white, width: 3),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppColors.primary
+                                              .withValues(alpha: 0.3),
+                                          blurRadius: 8,
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Icon(Icons.person,
+                                        color: Colors.white, size: 20),
+                                  ),
+                                ),
+                              ...visible.map((d) => Marker(
+                                    point:
+                                        LatLng(d.latitude, d.longitude),
+                                    width: 40,
+                                    height: 40,
+                                    child:
+                                        _DisasterMarkerIcon(disaster: d),
+                                  )),
+                            ],
+                          ),
+                        ],
                       );
                     },
-                    loading: () => const CircleLayer(circles: []),
-                    error: (e, s) => const CircleLayer(circles: []),
+                    loading: () => const SizedBox.shrink(),
+                    error: (e, _) => const SizedBox.shrink(),
                   ),
 
                   // ── Earthquake risk circles (from USGS check) ───────
@@ -143,7 +189,6 @@ class _MapScreenState extends ConsumerState<MapScreen>
                       earthquakeRisk.earthquakes.isNotEmpty)
                     CircleLayer(
                       circles: earthquakeRisk.earthquakes.map((eq) {
-                        // Radius: magnitude × 15 km, rendered in metres.
                         final radiusMetres = eq.magnitude * 15 * 1000;
                         return CircleMarker(
                           point: LatLng(eq.latitude, eq.longitude),
@@ -157,63 +202,6 @@ class _MapScreenState extends ConsumerState<MapScreen>
                         );
                       }).toList(),
                     ),
-
-                  // ── Markers: user pin + disaster icons.
-                  //    Hide disaster icons for any type that has an
-                  //    active risk panel (they'd just overlap circles).
-                  disasters.when(
-                    data: (disasterList) {
-                      final visibleDisasters =
-                          disasterList.where((d) {
-                        if (d.type == DisasterType.earthquake &&
-                            earthquakeRisk != null) { return false; }
-                        if (d.type == DisasterType.flood &&
-                            floodRisk != null) { return false; }
-                        if (d.type == DisasterType.weather &&
-                            weatherRisk != null) { return false; }
-                        return true;
-                      }).toList();
-
-                      return MarkerLayer(
-                        markers: [
-                          if (location != null)
-                            Marker(
-                              point: LatLng(location.latitude,
-                                  location.longitude),
-                              width: 40,
-                              height: 40,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                      color: Colors.white, width: 3),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppColors.primary
-                                          .withValues(alpha: 0.3),
-                                      blurRadius: 10,
-                                      spreadRadius: 3,
-                                    ),
-                                  ],
-                                ),
-                                child: const Icon(Icons.person,
-                                    color: Colors.white, size: 20),
-                              ),
-                            ),
-                          ...visibleDisasters.map((d) => Marker(
-                                point: LatLng(d.latitude, d.longitude),
-                                width: 40,
-                                height: 40,
-                                child:
-                                    _DisasterMarkerIcon(disaster: d),
-                              )),
-                        ],
-                      );
-                    },
-                    loading: () => const MarkerLayer(markers: []),
-                    error: (e, s) => const MarkerLayer(markers: []),
-                  ),
                 ],
               );
             },
@@ -223,63 +211,48 @@ class _MapScreenState extends ConsumerState<MapScreen>
                 const Center(child: Text('Error loading map')),
           ),
 
-          // ── Left Sidebar ──────────────────────────────────────────────
-          Positioned(
-            top: 0,
-            bottom: 0,
-            left: 0,
-            child: _MapLeftSidebar(
-              selectedTypes: selectedTypes,
-              isCheckingEarthquake: isCheckingRisk,
-              isCheckingFlood: isCheckingFloodRisk,
-              isCheckingWeather: isCheckingWeatherRisk,
-              onEarthquakeTap: () =>
-                  _handleEarthquakeChipTap(context, ref),
-              onFloodTap: () => _handleFloodChipTap(context, ref),
-              onWeatherTap: () => _handleWeatherChipTap(context, ref),
-            ),
-          ),
-
-          // ── Legend ───────────────────────────────────────────────────
-          Positioned(
-            top: 8,
-            right: 12,
-            child: _MapLegend(),
-          ),
-
           // ── Your Location label ──────────────────────────────────────
           Positioned(
             top: 8,
-            left: 72, // right of sidebar
-            child: _YourLocationChip(),
+            left: 8,
+            child: RepaintBoundary(child: _YourLocationChip()),
+          ),
+
+          // ── Severity legend ──────────────────────────────────────────
+          Positioned(
+            top: 8,
+            right: 12,
+            child: RepaintBoundary(child: _MapLegend()),
           ),
 
           // ── Zoom controls ────────────────────────────────────────────
           Positioned(
             bottom: 110,
             right: 12,
-            child: Column(
-              children: [
-                _ZoomButton(
-                  icon: Icons.add,
-                  onPressed: () {
-                    final newZoom =
-                        (_currentZoom + 1).clamp(3.0, 18.0);
-                    _animatedMapMove(
-                        _mapController.camera.center, newZoom);
-                  },
-                ),
-                const SizedBox(height: 8),
-                _ZoomButton(
-                  icon: Icons.remove,
-                  onPressed: () {
-                    final newZoom =
-                        (_currentZoom - 1).clamp(3.0, 18.0);
-                    _animatedMapMove(
-                        _mapController.camera.center, newZoom);
-                  },
-                ),
-              ],
+            child: RepaintBoundary(
+              child: Column(
+                children: [
+                  _ZoomButton(
+                    icon: Icons.add,
+                    onPressed: () {
+                      final newZoom =
+                          (_currentZoom + 1).clamp(3.0, 18.0);
+                      _animatedMapMove(
+                          _mapController.camera.center, newZoom);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _ZoomButton(
+                    icon: Icons.remove,
+                    onPressed: () {
+                      final newZoom =
+                          (_currentZoom - 1).clamp(3.0, 18.0);
+                      _animatedMapMove(
+                          _mapController.camera.center, newZoom);
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
 
@@ -287,32 +260,34 @@ class _MapScreenState extends ConsumerState<MapScreen>
           Positioned(
             bottom: 60,
             right: 12,
-            child: FloatingActionButton(
-              mini: true,
-              backgroundColor: Colors.white,
-              elevation: 2,
-              onPressed: () {
-                final location =
-                    ref.read(userLocationProvider).valueOrNull;
-                if (location != null) {
-                  _animatedMapMove(
-                    LatLng(location.latitude, location.longitude),
-                    _currentZoom,
-                  );
-                }
-              },
-              child: const Icon(Icons.navigation,
-                  color: AppColors.primary),
+            child: RepaintBoundary(
+              child: FloatingActionButton(
+                mini: true,
+                backgroundColor: Colors.white,
+                elevation: 2,
+                onPressed: () {
+                  final location =
+                      ref.read(userLocationProvider).valueOrNull;
+                  if (location != null) {
+                    _animatedMapMove(
+                      LatLng(location.latitude, location.longitude),
+                      _currentZoom,
+                    );
+                  }
+                },
+                child: const Icon(Icons.navigation,
+                    color: AppColors.primary),
+              ),
             ),
           ),
 
-          // ── Nearest Threat Card (only when no panels open) ───────────
+          // ── Nearest Threat Card (only when no panels open) ────────────
           if (earthquakeRisk == null &&
               floodRisk == null &&
               weatherRisk == null)
             Positioned(
               bottom: 16,
-              left: 72,
+              left: 6,
               right: 80,
               child: disasters.when(
                 data: (list) {
@@ -324,89 +299,122 @@ class _MapScreenState extends ConsumerState<MapScreen>
               ),
             ),
 
-          // ── Risk Panels (stacked column from bottom) ─────────────────
-          // We render whichever panels are open in a column anchored at
-          // the bottom so they never overlap each other.
-          if (earthquakeRisk != null ||
-              floodRisk != null ||
-              weatherRisk != null)
-            Positioned(
-              bottom: 60,
-              left: 72,
-              right: 12,
+          // ── Combined chip buttons + risk panels ────────────────────────
+          Positioned(
+            bottom: 16,
+            left: 6,
+            right: 12,
+            child: RepaintBoundary(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                verticalDirection: VerticalDirection.up,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (earthquakeRisk != null) ...[
-                    const SizedBox(height: 8),
-                    _EarthquakeRiskPanel(
-                      riskData: earthquakeRisk,
-                      isExpanded: _earthquakePanelExpanded,
-                      onToggleExpand: () => setState(() =>
-                          _earthquakePanelExpanded =
-                              !_earthquakePanelExpanded),
-                      onClose: () {
-                        ref
-                            .read(earthquakeRiskProvider.notifier)
-                            .state = null;
-                        final current =
-                            ref.read(selectedDisasterTypesProvider);
-                        ref
-                            .read(selectedDisasterTypesProvider.notifier)
-                            .state = Set<DisasterType>.from(current)
-                          ..remove(DisasterType.earthquake);
-                        setState(
-                            () => _earthquakePanelExpanded = true);
-                      },
-                      onEarthquakeTap: (eq) => _animatedMapMove(
-                          LatLng(eq.latitude, eq.longitude), 8),
-                    ),
-                  ],
-                  if (floodRisk != null) ...[
-                    const SizedBox(height: 8),
-                    _FloodRiskPanel(
-                      riskData: floodRisk,
-                      isExpanded: _floodPanelExpanded,
-                      onToggleExpand: () => setState(() =>
-                          _floodPanelExpanded = !_floodPanelExpanded),
-                      onClose: () {
-                        ref.read(floodRiskProvider.notifier).state =
-                            null;
-                        final current =
-                            ref.read(selectedDisasterTypesProvider);
-                        ref
-                            .read(selectedDisasterTypesProvider.notifier)
-                            .state = Set<DisasterType>.from(current)
-                          ..remove(DisasterType.flood);
-                        setState(() => _floodPanelExpanded = true);
-                      },
-                    ),
-                  ],
-                  if (weatherRisk != null) ...[
-                    const SizedBox(height: 8),
-                    _WeatherRiskPanel(
-                      riskData: weatherRisk,
-                      isExpanded: _weatherPanelExpanded,
-                      onToggleExpand: () => setState(() =>
-                          _weatherPanelExpanded =
-                              !_weatherPanelExpanded),
-                      onClose: () {
-                        ref.read(weatherRiskProvider.notifier).state =
-                            null;
-                        final current =
-                            ref.read(selectedDisasterTypesProvider);
-                        ref
-                            .read(selectedDisasterTypesProvider.notifier)
-                            .state = Set<DisasterType>.from(current)
-                          ..remove(DisasterType.weather);
-                        setState(() => _weatherPanelExpanded = true);
-                      },
-                    ),
-                  ],
+                  // Weather row (top)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      _SidebarButton(
+                        icon: Icons.cloud,
+                        label: 'Weather',
+                        color: AppColors.weather,
+                        isSelected: selectedTypes.contains(DisasterType.weather),
+                        isLoading: isCheckingWeatherRisk,
+                        onTap: () => _handleWeatherChipTap(context, ref),
+                      ),
+                      if (weatherRisk != null) ...[
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: _WeatherRiskPanel(
+                            riskData: weatherRisk,
+                            isExpanded: _weatherPanelExpanded,
+                            onToggleExpand: () => setState(() =>
+                                _weatherPanelExpanded = !_weatherPanelExpanded),
+                            onClose: () {
+                              ref.read(weatherRiskProvider.notifier).state = null;
+                              final current = ref.read(selectedDisasterTypesProvider);
+                              ref.read(selectedDisasterTypesProvider.notifier).state =
+                                  Set<DisasterType>.from(current)..remove(DisasterType.weather);
+                              setState(() => _weatherPanelExpanded = true);
+                            },
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Flood row (middle)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      _SidebarButton(
+                        icon: Icons.water_drop,
+                        label: 'Flood',
+                        color: AppColors.flood,
+                        isSelected: selectedTypes.contains(DisasterType.flood),
+                        isLoading: isCheckingFloodRisk,
+                        onTap: () => _handleFloodChipTap(context, ref),
+                      ),
+                      if (floodRisk != null) ...[
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: _FloodRiskPanel(
+                            riskData: floodRisk,
+                            isExpanded: _floodPanelExpanded,
+                            onToggleExpand: () => setState(() =>
+                                _floodPanelExpanded = !_floodPanelExpanded),
+                            onClose: () {
+                              ref.read(floodRiskProvider.notifier).state = null;
+                              final current = ref.read(selectedDisasterTypesProvider);
+                              ref.read(selectedDisasterTypesProvider.notifier).state =
+                                  Set<DisasterType>.from(current)..remove(DisasterType.flood);
+                              setState(() => _floodPanelExpanded = true);
+                            },
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Earthquake row (bottom)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      _SidebarButton(
+                        icon: Icons.public,
+                        label: 'Quake',
+                        color: AppColors.earthquake,
+                        isSelected: selectedTypes.contains(DisasterType.earthquake),
+                        isLoading: isCheckingRisk,
+                        onTap: () => _handleEarthquakeChipTap(context, ref),
+                      ),
+                      if (earthquakeRisk != null) ...[
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: _EarthquakeRiskPanel(
+                            riskData: earthquakeRisk,
+                            isExpanded: _earthquakePanelExpanded,
+                            onToggleExpand: () => setState(() =>
+                                _earthquakePanelExpanded = !_earthquakePanelExpanded),
+                            onClose: () {
+                              ref.read(earthquakeRiskProvider.notifier).state = null;
+                              final current = ref.read(selectedDisasterTypesProvider);
+                              ref.read(selectedDisasterTypesProvider.notifier).state =
+                                  Set<DisasterType>.from(current)..remove(DisasterType.earthquake);
+                              setState(() => _earthquakePanelExpanded = true);
+                            },
+                            onEarthquakeTap: (eq) => _animatedMapMove(
+                                LatLng(eq.latitude, eq.longitude), 8),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ],
               ),
             ),
+          ),
         ],
       ),
     );
@@ -660,96 +668,6 @@ class _MapScreenState extends ConsumerState<MapScreen>
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// LEFT SIDEBAR
-// ═══════════════════════════════════════════════════════════════════════════════
-
-class _MapLeftSidebar extends StatelessWidget {
-  final Set<DisasterType> selectedTypes;
-  final bool isCheckingEarthquake;
-  final bool isCheckingFlood;
-  final bool isCheckingWeather;
-  final VoidCallback onEarthquakeTap;
-  final VoidCallback onFloodTap;
-  final VoidCallback onWeatherTap;
-
-  const _MapLeftSidebar({
-    required this.selectedTypes,
-    required this.isCheckingEarthquake,
-    required this.isCheckingFlood,
-    required this.isCheckingWeather,
-    required this.onEarthquakeTap,
-    required this.onFloodTap,
-    required this.onWeatherTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 60,
-      margin: const EdgeInsets.only(top: 8, bottom: 8, left: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.07),
-            blurRadius: 12,
-            offset: const Offset(2, 0),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(height: 12),
-          _SidebarButton(
-            icon: Icons.public,
-            label: 'Quake',
-            color: AppColors.earthquake,
-            isSelected: selectedTypes.contains(DisasterType.earthquake),
-            isLoading: isCheckingEarthquake,
-            onTap: onEarthquakeTap,
-          ),
-          const SizedBox(height: 6),
-          _SidebarDivider(),
-          const SizedBox(height: 6),
-          _SidebarButton(
-            icon: Icons.water_drop,
-            label: 'Flood',
-            color: AppColors.flood,
-            isSelected: selectedTypes.contains(DisasterType.flood),
-            isLoading: isCheckingFlood,
-            onTap: onFloodTap,
-          ),
-          const SizedBox(height: 6),
-          _SidebarDivider(),
-          const SizedBox(height: 6),
-          _SidebarButton(
-            icon: Icons.cloud,
-            label: 'Weather',
-            color: AppColors.weather,
-            isSelected: selectedTypes.contains(DisasterType.weather),
-            isLoading: isCheckingWeather,
-            onTap: onWeatherTap,
-          ),
-          const SizedBox(height: 12),
-        ],
-      ),
-    );
-  }
-}
-
-class _SidebarDivider extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Container(
-        height: 1,
-        margin: const EdgeInsets.symmetric(horizontal: 10),
-        color: AppColors.border,
-      );
-}
 
 class _SidebarButton extends StatelessWidget {
   final IconData icon;
@@ -777,11 +695,18 @@ class _SidebarButton extends StatelessWidget {
         width: 48,
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? color.withValues(alpha: 0.12) : Colors.transparent,
+          color: Colors.white.withValues(alpha: 0.92),
           borderRadius: BorderRadius.circular(14),
           border: isSelected
-              ? Border.all(color: color.withValues(alpha: 0.35), width: 1.5)
-              : Border.all(color: Colors.transparent, width: 1.5),
+              ? Border.all(color: color, width: 1.5)
+              : Border.all(color: AppColors.border, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -936,9 +861,9 @@ class _DisasterMarkerIcon extends StatelessWidget {
         border: Border.all(color: Colors.white, width: 2),
         boxShadow: [
           BoxShadow(
-            color: bgColor.withValues(alpha: 0.4),
-            blurRadius: 8,
-            spreadRadius: 2,
+            color: bgColor.withValues(alpha: 0.35),
+            blurRadius: 6,
+            // No spreadRadius: reduces GPU compositing cost per marker.
           ),
         ],
       ),
