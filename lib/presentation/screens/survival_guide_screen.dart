@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/constants.dart';
+import 'guide_detail_screen.dart';
 
 
 class SurvivalGuideScreen extends ConsumerStatefulWidget {
@@ -11,7 +12,7 @@ class SurvivalGuideScreen extends ConsumerStatefulWidget {
 }
 
 class _SurvivalGuideScreenState extends ConsumerState<SurvivalGuideScreen> {
-  bool _offlineMode = true;
+  
 
   // Demo data for guides
   final List<_GuideCategory> _categories = [
@@ -98,11 +99,6 @@ class _SurvivalGuideScreenState extends ConsumerState<SurvivalGuideScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Offline Mode Toggle
-            _OfflineModeCard(
-              isEnabled: _offlineMode,
-              onToggle: (value) => setState(() => _offlineMode = value),
-            ),
             const SizedBox(height: 24),
 
             // Browse Categories
@@ -116,12 +112,27 @@ class _SurvivalGuideScreenState extends ConsumerState<SurvivalGuideScreen> {
             ),
             const SizedBox(height: 12),
 
-            // Category List
+            // Category List (clickable)
             ...List.generate(_categories.length, (index) {
               final category = _categories[index];
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-                child: _CategoryCard(category: category),
+                child: _CategoryCard(
+                  category: category,
+                  onTap: () {
+                    Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => GuideDetailScreen(
+                        title: category.title,
+                        stepsCount: category.steps,
+                        relatedGuides: category.relatedGuides,
+                        isOffline: category.isOffline,
+                        icon: category.icon,
+                        iconColor: category.iconColor,
+                        iconBgColor: category.iconBgColor,
+                      ),
+                    ));
+                  },
+                ),
               );
             }),
             const SizedBox(height: 24),
@@ -156,8 +167,6 @@ class _SurvivalGuideScreenState extends ConsumerState<SurvivalGuideScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Download All Button
-            _DownloadAllButton(),
             const SizedBox(height: 20),
           ],
         ),
@@ -186,133 +195,88 @@ class _GuideCategory {
   });
 }
 
-class _OfflineModeCard extends StatelessWidget {
-  final bool isEnabled;
-  final ValueChanged<bool> onToggle;
 
-  const _OfflineModeCard({required this.isEnabled, required this.onToggle});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.cloud_download, color: Colors.blue.shade700, size: 24),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  AppStrings.offlineMode,
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                Text(
-                  'Available without internet',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                ),
-              ],
-            ),
-          ),
-          Switch(
-            value: isEnabled,
-            onChanged: onToggle,
-            activeThumbColor: AppColors.primary,
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _CategoryCard extends StatelessWidget {
   final _GuideCategory category;
+  final VoidCallback? onTap;
 
-  const _CategoryCard({required this.category});
+  const _CategoryCard({required this.category, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: category.iconBgColor,
-              borderRadius: BorderRadius.circular(12),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: category.iconBgColor,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(category.icon, color: category.iconColor, size: 24),
             ),
-            child: Icon(category.icon, color: category.iconColor, size: 24),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  category.title,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${category.steps} essential steps',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                ),
-                if (category.isOffline) ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(Icons.download_done, color: Colors.green.shade600, size: 14),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Available offline',
-                        style: TextStyle(fontSize: 11, color: Colors.green.shade600),
-                      ),
-                    ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    category.title,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
-                ],
-                if ((category.relatedGuides).isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Builder(
-                    builder: (_) {
-                      final guidesText = category.relatedGuides.where((g) => g.trim().isNotEmpty).join(', ');
-                      if (guidesText.isEmpty) return const SizedBox.shrink();
-                      return Text(
-                        'Relevant guides: $guidesText',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey.shade700,
-                          fontWeight: FontWeight.w500,
+                  const SizedBox(height: 2),
+                  Text(
+                    '${category.steps} essential steps',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                  if (category.isOffline) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.download_done, color: Colors.green.shade600, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Available offline',
+                          style: TextStyle(fontSize: 11, color: Colors.green.shade600),
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      );
-                    },
-                  ),
+                      ],
+                    ),
+                  ],
+                  if ((category.relatedGuides).isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Builder(
+                      builder: (_) {
+                        final guidesText = category.relatedGuides.where((g) => g.trim().isNotEmpty).join(', ');
+                        if (guidesText.isEmpty) return const SizedBox.shrink();
+                        return Text(
+                          'Relevant guides: $guidesText',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade700,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        );
+                      },
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-          const Icon(Icons.chevron_right, color: AppColors.textSecondary),
-        ],
+            const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+          ],
+        ),
       ),
     );
   }
@@ -363,31 +327,4 @@ class _SafetyTipCard extends StatelessWidget {
   }
 }
 
-class _DownloadAllButton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.download_outlined, color: Colors.grey.shade600),
-          const SizedBox(width: 8),
-          Text(
-            AppStrings.downloadAllGuides,
-            style: TextStyle(
-              color: Colors.grey.shade700,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+
