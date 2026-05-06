@@ -60,7 +60,6 @@ dependencies:
 
   # Phone & SMS for SOS
   url_launcher: ^6.2.2
-  telephony: ^0.2.0
 
   # LLM Integration (for AI Safety Assistant)
   google_generative_ai: ^0.4.0
