@@ -79,7 +79,6 @@ starlette==0.52.1
 sympy==1.14.0
 threadpoolctl==3.6.0
 tokenizers==0.22.2
-torch==2.10.0+cpu
 tqdm==4.67.3
 typer==0.23.1
 typer-slim==0.23.1
@@ -91,4 +90,3 @@ urllib3==2.6.3
 uvicorn==0.40.0
 watchfiles==1.1.1
 websockets==16.0
-transformers @ git+https://github.com/Abubakar-rashid/model-loading-with-torch.device-meta-fix.git@9a0dd4f9cd182eb281c74a4900deef6d2c66d06b
