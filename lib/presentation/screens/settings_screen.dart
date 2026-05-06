@@ -10,16 +10,11 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final pushNotifications = ref.watch(pushNotificationsProvider);
     final locationTracking = ref.watch(locationTrackingProvider);
-    final darkMode = ref.watch(darkModeProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(AppStrings.settings),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -87,15 +82,7 @@ class SettingsScreen extends ConsumerWidget {
                     // Navigate to offline downloads
                   },
                 ),
-                const Divider(height: 1),
-                _SettingsToggleTile(
-                  icon: Icons.dark_mode_outlined,
-                  title: AppStrings.darkMode,
-                  value: darkMode,
-                  onChanged: (value) {
-                    ref.read(darkModeProvider.notifier).state = value;
-                  },
-                ),
+                const SizedBox.shrink(),
               ],
             ),
             const SizedBox(height: 24),

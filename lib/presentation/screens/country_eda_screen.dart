@@ -217,15 +217,6 @@ class _CountryEdaScreenState extends ConsumerState<CountryEdaScreen> {
         const SizedBox(height: 24),
 
         const _SectionTitle(
-          title: 'Yearly comparison',
-          subtitle:
-              'How the selected country compares with its own 5-year average.',
-        ),
-        const SizedBox(height: 12),
-        _CountryYearlyComparisonCard(snapshot: snapshot),
-        const SizedBox(height: 24),
-
-        const _SectionTitle(
           title: 'Hazard mix',
           subtitle: 'Which disaster types contribute most in this country.',
         ),
@@ -258,10 +249,6 @@ class _CountryEdaScreenState extends ConsumerState<CountryEdaScreen> {
         ),
         const SizedBox(height: 12),
         _CountryInsightCard(snapshot: snapshot),
-        const SizedBox(height: 24),
-
-        // Country Header
-        _CountryHeaderCard(eda: eda),
         const SizedBox(height: 24),
 
         // Risk Assessment
